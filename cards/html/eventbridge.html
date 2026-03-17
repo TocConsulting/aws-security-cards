@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS EventBridge Security | AWS Security Cards</title>
+<meta name="description" content="EventBridge is a serverless event bus that routes events between AWS services, SaaS apps, and custom applications. Attackers exploit rules to intercept sensitive events, inject malicious events, and create persistence mechanisms that trigger on specific AWS activities.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/eventbridge-card.webp" alt="AWS EventBridge Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/eventbridge.svg" alt="AWS EventBridge Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS EventBridge Security</span>
+        <span class="header-badge">EVENT BUS</span>
+      </div>
+      <p class="header-desc">EventBridge is a serverless event bus that routes events between AWS services, SaaS apps, and custom applications. Attackers exploit rules to intercept sensitive events, inject malicious events, and create persistence mechanisms that trigger on specific AWS activities.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Persistence Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">200+</div>
+          <div class="stat-label">AWS Event Sources</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">35+</div>
+          <div class="stat-label">Target Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Real-time</div>
+          <div class="stat-label">Event Processing</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Event Buses &amp; Rules</h4>
+          <p>EventBridge uses event buses (default and custom) to receive events. Rules match event patterns and route to targets (Lambda, SQS, SNS, Step Functions, etc.). Every AWS API call via CloudTrail generates an event on the default bus.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> A single rule on the default bus can intercept ANY AWS API call in real-time. This is the ultimate persistence and surveillance mechanism.</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Cross-Account &amp; Archives</h4>
+          <p>Event bus policies control cross-account event delivery. Archives store events for replay. API destinations enable HTTP webhook integration. Connections store auth credentials for external APIs.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Archives contain historical events that may include sensitive data. Replaying archived events can re-trigger actions in the account.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">EventBridge enables powerful persistence mechanisms. Rules can trigger Lambda functions on any AWS API call, providing real-time access to sensitive data and enabling automated response to defender actions.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Event Bus Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Malicious rule creation on default bus</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Event interception via wildcard patterns</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target hijacking (change rule targets)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account event injection</li></ul><h4 style="color: #f87171;">Data &amp; Infrastructure</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Archive data exfiltration via replay</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Schema enumeration for recon</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> API destination credential theft</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Connection secret extraction</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Bus Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Event bus policy with Principal: *</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Wildcard event patterns matching everything</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account rules without source restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unmonitored custom event buses</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Archives storing sensitive event data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing rule change monitoring</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SCP restricting PutRule/PutTargets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> API destinations with stored credentials</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Event Buses</div>
+          <pre><code>aws events list-event-buses</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Rules</div>
+          <pre><code>aws events list-rules</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Bus Policy</div>
+          <pre><code>aws events describe-event-bus --name default</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Archives</div>
+          <pre><code>aws events list-archives</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Event-Based Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Rule on CreateAccessKey to intercept new keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Rule on AssumeRole to capture session tokens</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Rule on GetSecretValue to mirror secrets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Rule on PutBucketPolicy to detect changes</li></ul><h4 style="color: #c084fc;">Target Exploitation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Lambda target with escalated IAM role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Step Functions target chaining API calls</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SNS target for data exfiltration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> API destination to attacker webhook</li></ul><div class="note"><strong>Key insight:</strong> EventBridge rules execute with the target's IAM role, not the rule creator's. If the target Lambda has admin access, the rule creator effectively has admin access.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Rule-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Rule on CreateUser -&gt; auto-add backdoor key</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Rule on StopLogging -&gt; re-enable CloudTrail</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Rule on DeleteRule -&gt; self-recreating rule</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Scheduled rule for periodic beacon/check-in</li></ul><h4 style="color: #facc15;">Advanced Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Rule on remediation -&gt; re-compromise target</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-account event bus for C2 channel</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Archive replay to re-trigger backdoors</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Self-healing infrastructure via event chains</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutRule (new rule creation)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutTargets (target modification)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutPermission (bus policy change)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApiDestination (webhook setup)</li></ul><h4 style="color: #4ade80;">Behavioral Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Rules matching broad event patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New rules on default event bus</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Cross-account event bus permissions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Rules targeting external Lambda/HTTP</li></ul><div class="note"><strong>Tool reference:</strong> Pacu module events__enum discovers rules, targets, and bus policies. Prowler check eventbridge_bus_exposed flags open bus policies.</div></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Create Intercept Rule</div>
+          <pre><code>aws events put-rule --name intercept-secrets --event-pattern '{&quot;source&quot;:[&quot;aws.secretsmanager&quot;],&quot;detail-type&quot;:[&quot;AWS API Call via CloudTrail&quot;],&quot;detail&quot;:{&quot;eventName&quot;:[&quot;GetSecretValue&quot;]}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Add Lambda Target</div>
+          <pre><code>aws events put-targets --rule intercept-secrets --targets '[{&quot;Id&quot;:&quot;exfil&quot;,&quot;Arn&quot;:&quot;arn:aws:lambda:us-east-1:123:function:exfil-handler&quot;}]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Scheduled Beacon</div>
+          <pre><code>aws events put-rule --name beacon --schedule-expression 'rate(5 minutes)'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Open Bus to Cross-Account</div>
+          <pre><code>aws events put-permission --event-bus-name default --action events:PutEvents --principal '*' --statement-id allow-all</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Replay Archived Events</div>
+          <pre><code>aws events start-replay --replay-name attack-replay --event-source-arn arn:aws:events:us-east-1:123:archive/my-archive --destination arn:aws:events:us-east-1:123:event-bus/default --event-start-time 2024-01-01T00:00:00Z --event-end-time 2024-01-02T00:00:00Z</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Rule Targets (Recon)</div>
+          <pre><code>aws events list-targets-by-rule --rule my-rule --query 'Targets[*].{Id:Id,Arn:Arn}'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Permissive Bus Policy</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;AllowCrossAccount&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;events:PutEvents&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:events:*:*:event-bus/default&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows any account to send events to this bus - enables event injection from anywhere</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Unrestricted Rule Creation</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;events:PutRule&quot;,
+    &quot;events:PutTargets&quot;,
+    &quot;iam:PassRole&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}
+// Allows creating rules that intercept ANY event
+// and route to ANY target with ANY role</code></pre>
+          <p class="policy-desc">PutRule + PutTargets + PassRole = full event interception and arbitrary code execution</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Restricted Bus Policy</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;AllowTrustedAccount&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;AWS&quot;: &quot;arn:aws:iam::TRUSTED_ACCOUNT:root&quot;
+    },
+    &quot;Action&quot;: &quot;events:PutEvents&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:events:*:*:event-bus/default&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;events:source&quot;: [&quot;trusted.application&quot;]
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Only allows specific account with specific event source - no wildcards</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - SCP Blocking Rule Creation</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;events:PutRule&quot;,
+      &quot;events:PutTargets&quot;,
+      &quot;events:PutPermission&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringNotLike&quot;: {
+        &quot;aws:PrincipalArn&quot;: [
+          &quot;arn:aws:iam::*:role/EventBridgeAdmin&quot;
+        ]
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">SCP prevents rule creation except by designated admin role</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">👁️</span>
+            <div>
+              <h4>Monitor Rule Changes</h4>
+              <p>Alert on any EventBridge rule creation, modification, or target changes in real-time.</p>
+              <pre><code>EventBridge rule on events:PutRule,\nPutTargets, RemoveTargets -&gt; SNS alert</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Restrict Cross-Account Access</h4>
+              <p>Use explicit conditions in event bus policies instead of Principal: *.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;StringEquals&quot;: {\n  &quot;events:source&quot;: [&quot;trusted.app&quot;]\n}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>SCP to Limit Rule Creation</h4>
+              <p>Prevent unauthorized principals from creating EventBridge rules via Service Control Policies.</p>
+              <pre><code>SCP: Deny events:PutRule except\nfrom arn:...:role/EventBridgeAdmin</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Audit Existing Rules</h4>
+              <p>Regularly review all rules and targets for suspicious patterns like wildcard matchers.</p>
+              <pre><code>aws events list-rules | jq \\\n  '.Rules[] | {Name, EventPattern}'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Encrypt Archives</h4>
+              <p>Use KMS encryption for event archives to protect sensitive historical event data.</p>
+              <pre><code>aws events create-archive \\\n  --archive-name secure-archive \\\n  --event-source-arn arn:aws:events:REGION:ACCOUNT:event-bus/default</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏷️</span>
+            <div>
+              <h4>Tag-Based Access Control</h4>
+              <p>Tag authorized rules and alert on untagged rule creation as an anomaly indicator.</p>
+              <pre><code>aws events tag-resource --resource-arn &lt;arn&gt;\n  --tags Key=Authorized,Value=true</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS EventBridge Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

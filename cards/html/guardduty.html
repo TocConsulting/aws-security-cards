@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS GuardDuty Security | AWS Security Cards</title>
+<meta name="description" content="GuardDuty is AWS's managed threat detection service. It analyzes CloudTrail, VPC Flow Logs, and DNS logs to detect malicious activity. Red teamers must understand what triggers alerts.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/guardduty-card.webp" alt="AWS GuardDuty Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/guardduty.svg" alt="AWS GuardDuty Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS GuardDuty Security</span>
+        <span class="header-badge">THREAT DETECTION</span>
+      </div>
+      <p class="header-desc">GuardDuty is AWS's managed threat detection service. It analyzes CloudTrail, VPC Flow Logs, and DNS logs to detect malicious activity. Red teamers must understand what triggers alerts.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">ML-Based</div>
+          <div class="stat-label">Detection</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">100+</div>
+          <div class="stat-label">Finding Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">3</div>
+          <div class="stat-label">Data Sources</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">~15 min</div>
+          <div class="stat-label">Detection Delay</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">CloudTrail Analysis</h4>
+          <p>Analyzes management events for suspicious API activity: unusual regions, first-time API calls, known malicious IPs, credential abuse patterns.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">VPC Flow Logs</h4>
+          <p>Detects network anomalies: port scanning, unusual outbound traffic, communication with known C2 servers, cryptocurrency mining patterns.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">DNS Logs</h4>
+          <p>Monitors DNS queries for: C2 domain lookups, DNS exfiltration attempts, cryptomining pool connections, DGA domain patterns.</p>
+          
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 70%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">GuardDuty can be disabled, findings can be archived/suppressed, and detection has blind spots. Understanding finding types helps red teamers operate below detection thresholds.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Disable Detection</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable GuardDuty detector entirely</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Suspend GuardDuty in specific regions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete detector to stop all findings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Remove member accounts from org detector</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify publishing destination</li></ul><h4 style="color: #f87171;">Suppress Findings</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Archive findings to hide them</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create suppression rules for your IPs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Add attacker IPs to trusted IP list</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Mark findings as &quot;useful&quot; to reduce noise</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify S3 publication frequency</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">👻 Evasion Techniques</h3><h4 style="color: #fb923c;">Behavioral Evasion</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Stay within normal API call patterns</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Use same regions as legitimate users</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Avoid known malicious IP addresses</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Throttle reconnaissance to avoid spikes</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Blend with existing traffic patterns</li></ul><h4 style="color: #fb923c;">Technical Evasion</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Use residential proxies, not VPNs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Avoid Tor exit nodes (flagged)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DNS over HTTPS to bypass DNS analysis</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Encrypt C2 traffic to avoid pattern detection</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Use legitimate AWS services as proxies</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Detectors</div>
+          <pre><code>aws guardduty list-detectors</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Detector Details</div>
+          <pre><code>aws guardduty get-detector --detector-id abc123</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Findings</div>
+          <pre><code>aws guardduty list-findings \\
+  --detector-id abc123 \\
+  --finding-criteria '{&quot;Criterion&quot;:{&quot;severity&quot;:{&quot;Gte&quot;:7}}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List IP Sets (Trusted/Threat)</div>
+          <pre><code>aws guardduty list-ip-sets --detector-id abc123</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Suppression Rules</div>
+          <pre><code>aws guardduty list-filters --detector-id abc123</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🚨 Key Finding Types</h3><h4 style="color: #c084fc;">IAM Findings</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Recon:IAMUser/MaliciousIPCaller</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PenTest:IAMUser/KaliLinux</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Persistence:IAMUser/AnomalousBehavior</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PrivilegeEscalation:IAMUser/AnomalousBehavior</li></ul><h4 style="color: #c084fc;">EC2/Network Findings</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CryptoCurrency:EC2/BitcoinTool.B!DNS</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Backdoor:EC2/C&amp;CActivity.B!DNS</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Trojan:EC2/DNSDataExfiltration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> UnauthorizedAccess:EC2/SSHBruteForce</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Impact:EC2/PortSweep</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">⚡ Common Triggers</h3><h4 style="color: #facc15;">Will Trigger GuardDuty</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> API calls from Tor exit nodes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Calls from known malicious IPs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> First-time API in unusual region</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> EC2 credential use outside AWS</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> DNS queries to known C2 domains</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Port scanning from EC2 instances</li></ul><h4 style="color: #facc15;">May NOT Trigger</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> API calls from residential IPs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Slow, low-volume reconnaissance</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Traffic to non-blacklisted domains</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Actions matching normal patterns</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Encrypted exfiltration channels</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events to Monitor</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteDetector - detector deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateDetector - settings changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ArchiveFindings - findings hidden</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateFilter - suppression rule added</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateIPSet - trusted IP list modified</li></ul><h4 style="color: #4ade80;">Indicators of Tampering</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GuardDuty disabled unexpectedly</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New suppression filters created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Findings archived in bulk</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Trusted IP list expanded</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Threat IP list deleted</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Disable GuardDuty Detector</div>
+          <pre><code>aws guardduty update-detector \\
+  --detector-id abc123 \\
+  --no-enable</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete GuardDuty Detector</div>
+          <pre><code>aws guardduty delete-detector --detector-id abc123</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Archive All Findings</div>
+          <pre><code>aws guardduty archive-findings \\
+  --detector-id abc123 \\
+  --finding-ids $(aws guardduty list-findings --detector-id abc123 --query 'FindingIds' --output text)</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Suppression Rule</div>
+          <pre><code>aws guardduty create-filter \\
+  --detector-id abc123 \\
+  --name &quot;SuppressMyIP&quot; \\
+  --action ARCHIVE \\
+  --finding-criteria '{&quot;Criterion&quot;:{&quot;service.action.networkConnectionAction.remoteIpDetails.ipAddressV4&quot;:{&quot;Eq&quot;:[&quot;1.2.3.4&quot;]}}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Add Trusted IP</div>
+          <pre><code>aws guardduty create-ip-set \\
+  --detector-id abc123 \\
+  --name &quot;TrustedIPs&quot; \\
+  --format TXT \\
+  --location s3://bucket/trusted-ips.txt \\
+  --activate</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete Threat IP List</div>
+          <pre><code>aws guardduty delete-threat-intel-set \\
+  --detector-id abc123 \\
+  --threat-intel-set-id threat123</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Can Disable GuardDuty</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;guardduty:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full GuardDuty access allows disabling detection and suppressing findings</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Read-Only - Security Monitoring</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;guardduty:Get*&quot;,
+      &quot;guardduty:List*&quot;,
+      &quot;guardduty:Describe*&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access for security analysts without modification rights</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">SCP - Prevent GuardDuty Disable</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;PreventGuardDutyDisable&quot;,
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;guardduty:DeleteDetector&quot;,
+      &quot;guardduty:UpdateDetector&quot;,
+      &quot;guardduty:DeleteMembers&quot;,
+      &quot;guardduty:DisassociateFromMasterAccount&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Organization SCP to prevent disabling GuardDuty in member accounts</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Can Suppress Findings</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;guardduty:ArchiveFindings&quot;,
+      &quot;guardduty:CreateFilter&quot;,
+      &quot;guardduty:UpdateFilter&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Ability to archive findings and create suppression rules hides attacks</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏢</span>
+            <div>
+              <h4>Use Organization Delegated Admin</h4>
+              <p>Centralize GuardDuty management so member accounts can't disable it.</p>
+              <pre><code>aws guardduty enable-organization-admin-account \\
+  --admin-account-id 123456789012</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>SCP to Prevent Tampering</h4>
+              <p>Use Service Control Policies to deny GuardDuty modifications.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Export Findings to S3/SIEM</h4>
+              <p>Publish findings to S3 or EventBridge for independent monitoring.</p>
+              <pre><code>aws guardduty create-publishing-destination \\
+  --detector-id abc123 \\
+  --destination-type S3 \\
+  --destination-properties DestinationArn=arn:aws:s3:::findings-bucket</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔔</span>
+            <div>
+              <h4>Alert on GuardDuty Changes</h4>
+              <p>Create CloudWatch alarms for DeleteDetector, UpdateDetector, ArchiveFindings.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌍</span>
+            <div>
+              <h4>Enable in All Regions</h4>
+              <p>GuardDuty must be enabled per-region - ensure coverage everywhere.</p>
+              <pre><code>for region in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do
+  aws guardduty create-detector --enable --region $region
+done</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🎯</span>
+            <div>
+              <h4>Configure Threat Intel Feeds</h4>
+              <p>Add custom threat IP lists for your industry or known adversaries.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS GuardDuty Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

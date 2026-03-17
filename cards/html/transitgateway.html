@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Transit Gateway Security | AWS Security Cards</title>
+<meta name="description" content="Transit Gateway (TGW) is a network hub connecting VPCs, VPNs, and Direct Connect. Route manipulation can destroy network segmentation, enable traffic interception, and provide lateral movement across accounts.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/transitgateway-card.webp" alt="AWS Transit Gateway Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/transitgateway.svg" alt="AWS Transit Gateway Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Transit Gateway Security</span>
+        <span class="header-badge">NETWORK TRANSIT</span>
+      </div>
+      <p class="header-desc">Transit Gateway (TGW) is a network hub connecting VPCs, VPNs, and Direct Connect. Route manipulation can destroy network segmentation, enable traffic interception, and provide lateral movement across accounts.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">No Deny</div>
+          <div class="stat-label">Route Tables</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Cross-Acct</div>
+          <div class="stat-label">Via RAM</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">5000</div>
+          <div class="stat-label">Max Attachments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">No Logs</div>
+          <div class="stat-label">By Default</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Route Tables &amp; Propagation</h4>
+          <p>TGW route tables control traffic flow between attachments. Route propagation automatically learns routes from VPCs and VPNs. A single shared route table with propagation enabled creates a full mesh network, destroying all segmentation.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Attachments &amp; Sharing</h4>
+          <p>TGW connects VPCs, VPN connections, Direct Connect gateways, and TGW peering. Cross-account sharing via RAM allows other accounts to attach their VPCs. There is no concept of &quot;deny&quot; in TGW route tables - only allow or blackhole.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Inter-Region Peering</h4>
+          <p>TGW peering connects transit gateways across regions, enabling global routing. A compromised TGW in one region can be peered to reach networks in other regions, amplifying the blast radius of a network compromise significantly.</p>
+          
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 85%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Transit Gateway controls routing for the entire network. Route manipulation destroys segmentation, blackhole deletion re-enables blocked traffic, and TGW flow logs are not enabled by default leaving no audit trail.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Route Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create routes to redirect traffic through attacker VPC</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Replace existing routes to intercept sensitive traffic</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete blackhole routes to re-enable blocked connectivity</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enable route propagation for full mesh access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> VPN route injection from compromised VPN connection</li></ul><h4 style="color: #f87171;">Network Expansion</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create TGW peering attachment for cross-region access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Attach attacker VPC to shared Transit Gateway</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify route table associations to gain access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account pivot via RAM-shared TGW</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Direct Connect gateway attachment for on-premises access</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Routing Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Single route table for all VPCs (no segmentation)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Auto-propagation enabled on all route tables</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No blackhole routes for sensitive CIDRs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Default route table association for new attachments</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overlapping CIDRs causing routing conflicts</li></ul><h4 style="color: #fb923c;">Monitoring Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> TGW flow logs not enabled (not on by default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No alerts on route table changes</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> RAM sharing without restriction on who can attach</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No network segmentation validation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Peering attachments not audited</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Transit Gateways</div>
+          <pre><code>aws ec2 describe-transit-gateways</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Route Tables</div>
+          <pre><code>aws ec2 describe-transit-gateway-route-tables \\
+  --filters Name=transit-gateway-id,Values=tgw-0123456789abcdef</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Search Routes</div>
+          <pre><code>aws ec2 search-transit-gateway-routes \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --filters Name=state,Values=active</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Attachments</div>
+          <pre><code>aws ec2 describe-transit-gateway-attachments \\
+  --filters Name=transit-gateway-id,Values=tgw-0123456789abcdef</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Peering Attachments</div>
+          <pre><code>aws ec2 describe-transit-gateway-peering-attachments</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🚨 Key Concepts</h3><h4 style="color: #c084fc;">No Deny in TGW Route Tables</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> TGW route tables only have active routes and blackhole routes</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> No deny rules like NACLs or security groups</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Blackhole routes drop traffic but can be deleted by attacker</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Route specificity determines which route wins (longest prefix)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> A more specific route overrides broader blackhole routes</li></ul><h4 style="color: #c084fc;">Blast Radius Amplification</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Single TGW connects hundreds of VPCs across accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Route propagation enables auto-discovery of all connected networks</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Cross-region peering extends reach to other AWS regions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> VPN attachment routes can be injected from on-premises</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Compromising TGW admin = compromising the entire network</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">⚡ Persistence Techniques</h3><h4 style="color: #facc15;">Route Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add static routes pointing to attacker VPC attachment</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Enable propagation to auto-learn new VPC routes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional route table with permissive routing</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Associate target VPC attachments with attacker route table</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create peering attachment for out-of-band access path</li></ul><h4 style="color: #facc15;">Attachment Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attach attacker VPC to Transit Gateway via RAM share</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create VPN attachment for persistent external access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify existing route table associations subtly</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add routes that survive attachment deletion</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-account attachment remains after RAM share revoked</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateTransitGatewayRoute - new route added to TGW route table</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ReplaceTransitGatewayRoute - existing route modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteTransitGatewayRoute - blackhole route removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateTransitGatewayPeeringAttachment - peering created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssociateTransitGatewayRouteTable - association changed</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unexpected route additions to TGW route tables</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Blackhole routes deleted without change ticket</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New VPC attachments from unknown accounts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Peering attachments to unknown regions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Route propagation enabled on isolated route tables</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Create Route to Redirect Traffic</div>
+          <pre><code>aws ec2 create-transit-gateway-route \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --destination-cidr-block 10.0.0.0/8 \\
+  --transit-gateway-attachment-id tgw-attach-attacker</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Replace Existing Route</div>
+          <pre><code>aws ec2 replace-transit-gateway-route \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --destination-cidr-block 10.1.0.0/16 \\
+  --transit-gateway-attachment-id tgw-attach-attacker</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete Blackhole Route</div>
+          <pre><code>aws ec2 delete-transit-gateway-route \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --destination-cidr-block 10.99.0.0/16</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Enable Route Propagation (Full Mesh)</div>
+          <pre><code>aws ec2 enable-transit-gateway-route-table-propagation \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --transit-gateway-attachment-id tgw-attach-prod-vpc</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Peering Attachment (Cross-Region)</div>
+          <pre><code>aws ec2 create-transit-gateway-peering-attachment \\
+  --transit-gateway-id tgw-source \\
+  --peer-transit-gateway-id tgw-target \\
+  --peer-region eu-west-1 \\
+  --peer-account-id 123456789012</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Map All Connected Networks</div>
+          <pre><code>for rtb in $(aws ec2 describe-transit-gateway-route-tables --query 'TransitGatewayRouteTables[].TransitGatewayRouteTableId' --output text); do
+  echo &quot;=== Route Table: $rtb ===&quot;
+  aws ec2 search-transit-gateway-routes --transit-gateway-route-table-id $rtb --filters Name=state,Values=active --query 'Routes[].[DestinationCidrBlock,TransitGatewayAttachments[0].ResourceId]' --output table
+done</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full TGW Route Control</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ec2:CreateTransitGatewayRoute&quot;,
+      &quot;ec2:ReplaceTransitGatewayRoute&quot;,
+      &quot;ec2:DeleteTransitGatewayRoute&quot;,
+      &quot;ec2:*TransitGateway*&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full TGW access allows route manipulation, blackhole deletion, and cross-region peering creation</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Network Monitoring</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ec2:DescribeTransitGateways&quot;,
+      &quot;ec2:DescribeTransitGatewayRouteTables&quot;,
+      &quot;ec2:SearchTransitGatewayRoutes&quot;,
+      &quot;ec2:DescribeTransitGatewayAttachments&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access for network monitoring without route modification capabilities</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Can Delete Blackhole Routes</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ec2:DeleteTransitGatewayRoute&quot;,
+      &quot;ec2:EnableTransitGatewayRouteTablePropagation&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Deleting blackhole routes re-enables blocked traffic, and enabling propagation creates full mesh</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - SCP Restrict Route Changes</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;DenyTGWRouteChanges&quot;,
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;ec2:CreateTransitGatewayRoute&quot;,
+      &quot;ec2:ReplaceTransitGatewayRoute&quot;,
+      &quot;ec2:DeleteTransitGatewayRoute&quot;,
+      &quot;ec2:CreateTransitGatewayPeeringAttachment&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringNotEquals&quot;: {
+        &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/NetworkAdmin&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">SCP restricts TGW route changes to a dedicated NetworkAdmin role only</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Separate Route Tables Per Security Domain</h4>
+              <p>Use isolated route tables for production, development, and shared services. Never use a single route table for all VPCs.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Disable Auto-Propagation</h4>
+              <p>Disable route propagation and use static routes only. Auto-propagation creates full mesh that breaks segmentation.</p>
+              <pre><code>aws ec2 disable-transit-gateway-route-table-propagation \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --transit-gateway-attachment-id tgw-attach-vpc</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📡</span>
+            <div>
+              <h4>Enable TGW Flow Logs</h4>
+              <p>TGW flow logs are not enabled by default. Enable them to detect traffic anomalies and unauthorized routing.</p>
+              <pre><code>aws ec2 create-flow-logs \\
+  --resource-type TransitGateway \\
+  --resource-ids tgw-abc123 \\
+  --traffic-type ALL \\
+  --log-destination-type s3 \\
+  --log-destination arn:aws:s3:::flow-logs-bucket</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🕳️</span>
+            <div>
+              <h4>Blackhole Unused CIDRs</h4>
+              <p>Add blackhole routes for CIDRs that should never be routable to prevent lateral movement.</p>
+              <pre><code>aws ec2 create-transit-gateway-route \\
+  --transit-gateway-route-table-id tgw-rtb-abc123 \\
+  --destination-cidr-block 10.99.0.0/16 \\
+  --blackhole</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔔</span>
+            <div>
+              <h4>Alert on Route Table Changes</h4>
+              <p>Create EventBridge rules for CreateTransitGatewayRoute, DeleteTransitGatewayRoute, and peering changes.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏢</span>
+            <div>
+              <h4>Restrict RAM Sharing</h4>
+              <p>Control which accounts can attach to the TGW via RAM resource share permissions and SCPs.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Transit Gateway Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

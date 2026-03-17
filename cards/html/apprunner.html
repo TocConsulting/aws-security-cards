@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS App Runner Security | AWS Security Cards</title>
+<meta name="description" content="AWS App Runner deploys containerized web apps and APIs from source code or container images. Security risks include environment variable exposure, IAM role abuse, and source code theft.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f9731615, #0a0e1a, #eab30815);
+    border: 1px solid #f973164d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #f973160d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f9731633;
+    color: #f97316;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #f973164d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/apprunner-card.webp" alt="AWS App Runner Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/apprunner.svg" alt="AWS App Runner Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS App Runner Security</span>
+        <span class="header-badge">CONTAINERS</span>
+      </div>
+      <p class="header-desc">AWS App Runner deploys containerized web apps and APIs from source code or container images. Security risks include environment variable exposure, IAM role abuse, and source code theft.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Regional</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">ECR/GitHub</div>
+          <div class="stat-label">Source</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Auto-Scale</div>
+          <div class="stat-label">Compute</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#f97316;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #f97316;">Source Code Deployment</h4>
+          <p>Connects to GitHub repositories for automatic builds and deployments. Stores GitHub connection credentials. Build logs may contain sensitive information.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> GitHub connection ARN can be enumerated to understand repository access. Build commands may expose secrets.</div>
+        </div>
+        <div>
+          <h4 style="color: #f97316;">Container Image Deployment</h4>
+          <p>Pulls images from ECR (public or private). Auto-deploys on image push. Service runs with instance role that can access other AWS services.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Instance role often overly permissive. Container environment variables may contain database credentials.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 65%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">App Runner simplifies deployment but abstracts security controls. Environment variables, IAM roles, and source code connections are common attack vectors for credential theft and lateral movement.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential Exposure</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Environment variables with secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Build logs exposing credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> GitHub token from connection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Instance role credential theft</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> ECR credentials in service config</li></ul><h4 style="color: #f87171;">Service Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Application vulnerability exploitation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to metadata service</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Container escape attempts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Auto-deploy hijacking</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Source code repository poisoning</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">IAM Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance role with AdministratorAccess</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Access role allowing all ECR repos</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No condition keys on IAM policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account role trust too broad</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing VPC egress controls</li></ul><h4 style="color: #fb923c;">Configuration Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets in plain environment variables</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public endpoint without WAF</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC connector configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Observability logs exposing data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Auto-scaling allows resource abuse</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Services</div>
+          <pre><code>aws apprunner list-services</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Service</div>
+          <pre><code>aws apprunner describe-service \\
+  --service-arn SERVICE_ARN</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Connections</div>
+          <pre><code>aws apprunner list-connections</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Auto Scaling Configs</div>
+          <pre><code>aws apprunner list-auto-scaling-configurations</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List VPC Connectors</div>
+          <pre><code>aws apprunner list-vpc-connectors</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Instance Role Abuse</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SSRF to 169.254.170.2 for task credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Instance role → S3/DynamoDB access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Instance role → Secrets Manager</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ECR access role → Pull other images</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> VPC connector → Internal resources</li></ul><h4 style="color: #c084fc;">Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> App vuln → SSRF → Instance role creds</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Build logs → GitHub token → Repo access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Env vars → DB creds → Data access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> VPC connector → Private subnet resources</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Auto-deploy → Code injection → RCE</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">📊 Data Exposure</h3><h4 style="color: #facc15;">Sensitive Data Locations</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Environment variables</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Build output logs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Application logs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Container filesystem</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Connected GitHub repos</li></ul><h4 style="color: #facc15;">Common Secrets Found</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> DATABASE_URL with credentials</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> API_KEY for third-party services</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> AWS_ACCESS_KEY_ID (anti-pattern)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> JWT_SECRET for authentication</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> GITHUB_TOKEN for integrations</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateService - new service</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateService - config changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeService - recon activity</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ListConnections - enum connections</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssociateCustomDomain - domain changes</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual outbound connections</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Metadata service access patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed authentication attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unexpected deployments</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Environment variable changes</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Get Service Details (includes env vars)</div>
+          <pre><code>aws apprunner describe-service \\
+  --service-arn SERVICE_ARN \\
+  --query 'Service.SourceConfiguration'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Connection Details</div>
+          <pre><code>aws apprunner describe-custom-domains \\
+  --service-arn SERVICE_ARN</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Operations (deployment history)</div>
+          <pre><code>aws apprunner list-operations \\
+  --service-arn SERVICE_ARN</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">SSRF to Get Task Role (from app)</div>
+          <pre><code>curl http://169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Build Logs</div>
+          <pre><code>aws logs get-log-events \\
+  --log-group-name /aws/apprunner/SERVICE/BUILD</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Application Logs</div>
+          <pre><code>aws logs get-log-events \\
+  --log-group-name /aws/apprunner/SERVICE/application</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;apprunner:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full App Runner access - can create/modify services and view secrets</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read Only</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;apprunner:DescribeService&quot;,
+    &quot;apprunner:ListServices&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:apprunner:*:*:service/prod-*&quot;
+}</code></pre>
+          <p class="policy-desc">Only describe specific services matching pattern</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Risky - Overly Broad Instance Role</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;s3:*&quot;,
+    &quot;dynamodb:*&quot;,
+    &quot;secretsmanager:*&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Instance role with broad access - SSRF leads to full compromise</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Minimal Instance Role</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;s3:GetObject&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:s3:::app-assets/*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringEquals&quot;: {&quot;aws:SourceVpc&quot;: &quot;vpc-xxx&quot;}
+  }
+}</code></pre>
+          <p class="policy-desc">Instance role limited to specific bucket with VPC condition</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Use Secrets Manager</h4>
+              <p>Store secrets in Secrets Manager instead of environment variables.</p>
+              <pre><code>aws secretsmanager create-secret --name app/database --secret-string ...</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>Minimal Instance Role</h4>
+              <p>Apply least privilege to instance role. Only grant required permissions.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>VPC Connector</h4>
+              <p>Use VPC connector to restrict network access and enable private connectivity.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>WAF Protection</h4>
+              <p>Associate WAF WebACL with App Runner service for application-layer protection.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable Observability</h4>
+              <p>Enable tracing and logging but ensure no secrets in log output.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Review Build Logs</h4>
+              <p>Audit build logs for credential exposure. Use secrets in build environment.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS App Runner Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

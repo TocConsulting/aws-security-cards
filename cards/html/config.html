@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Config Security | AWS Security Cards</title>
+<meta name="description" content="AWS Config tracks resource configurations and compliance over time. It provides a complete inventory of AWS resources, configuration history, and compliance status against rules. Attackers use Config for reconnaissance and to understand the security posture of targets.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/config-card.webp" alt="AWS Config Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/config.svg" alt="AWS Config Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Config Security</span>
+        <span class="header-badge">COMPLIANCE &amp; CONFIGURATION</span>
+      </div>
+      <p class="header-desc">AWS Config tracks resource configurations and compliance over time. It provides a complete inventory of AWS resources, configuration history, and compliance status against rules. Attackers use Config for reconnaissance and to understand the security posture of targets.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">300+</div>
+          <div class="stat-label">Resource Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">7 Years</div>
+          <div class="stat-label">Max Retention</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Continuous</div>
+          <div class="stat-label">Recording</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Configuration Recording</h4>
+          <p>Config continuously records resource configurations, capturing every change. This creates a timeline of configuration items (CIs) that can be queried, enabling compliance auditing and troubleshooting configuration drift.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Configuration history reveals security group changes, IAM policy modifications, and infrastructure secrets</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Config Rules &amp; Compliance</h4>
+          <p>Config Rules evaluate resource configurations against desired settings. Managed rules check common compliance requirements, while custom rules use Lambda functions. Non-compliant resources trigger remediation actions.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Disabling or manipulating rules can hide security violations and block automated remediation</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">AWS Config provides a comprehensive inventory and historical record of all AWS resources. Access grants attackers detailed reconnaissance data including IAM policies, security groups, encryption settings, and the ability to identify non-compliant resources for exploitation.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Reconnaissance</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> List all resources in the AWS account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Query configuration history for secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Identify non-compliant resources to exploit</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Discover security group rules and network ACLs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Map IAM roles and their attached policies</li></ul><h4 style="color: #f87171;">Evasion &amp; Persistence</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete Config rules to prevent detection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable configuration recorder</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Stop delivery channel to halt logging</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify remediation actions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete configuration snapshots</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Recording Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Recorder not enabled for all resource types</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Global resources not included in recording</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Short retention period loses history</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Delivery channel to unprotected S3 bucket</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing KMS encryption on configuration data</li></ul><h4 style="color: #fb923c;">Access Control Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> config:* permissions too broadly granted</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Describe permissions expose all configurations</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing condition keys on sensitive actions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account aggregator overly permissive</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Remediation Lambda with excessive privileges</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Discovered Resources</div>
+          <pre><code>aws configservice list-discovered-resources \\
+  --resource-type AWS::IAM::Role</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Resource Configuration</div>
+          <pre><code>aws configservice get-resource-config-history \\
+  --resource-type AWS::EC2::SecurityGroup \\
+  --resource-id sg-12345678</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Config Rules</div>
+          <pre><code>aws configservice describe-config-rules</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Compliance Status</div>
+          <pre><code>aws configservice describe-compliance-by-config-rule</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Query Resources (Advanced SQL)</div>
+          <pre><code>aws configservice select-resource-config \\
+  --expression &quot;SELECT * WHERE resourceType = 'AWS::S3::Bucket'&quot;</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #60a5fa33;">
+        <h3 style="color: #60a5fa;">📜 Configuration History Mining</h3><h4 style="color: #60a5fa;">High-Value Data</h4><ul><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> IAM policy versions with past permissions</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Security group rules history (open ports)</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> S3 bucket policies over time</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> KMS key policies and grants</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Lambda function environment variables</li></ul><h4 style="color: #60a5fa;">Historical Analysis</h4><ul><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Find when encryption was disabled</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Identify removed security restrictions</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Discover deleted IAM roles/policies</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Track resource relationship changes</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Correlate changes with incidents</li></ul><div class="note"><strong>Recon Gold:</strong> Configuration history may reveal credentials that were accidentally committed and later removed.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔧 Rule Manipulation</h3><h4 style="color: #facc15;">Disable Detection</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete Config rules checking for violations</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Stop the configuration recorder</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete delivery channel to stop S3 logging</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify rule scope to exclude targets</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Change evaluation frequency to delay detection</li></ul><h4 style="color: #facc15;">Remediation Sabotage</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete automatic remediation configurations</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify remediation Lambda functions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Change SSM documents for remediation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Increase retry attempts to delay fixes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Target remediation IAM role for privilege escalation</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteConfigRule - rule deletion</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> StopConfigurationRecorder - recorder stopped</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteDeliveryChannel - channel removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutRemediationConfigurations - remediation changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SelectResourceConfig - SQL query executed</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Configuration recorder stopped unexpectedly</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Config rules deleted or modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk resource queries from new principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Historical configuration accessed at unusual times</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Aggregator authorization changes</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">List All IAM Roles</div>
+          <pre><code>aws configservice list-discovered-resources \\
+  --resource-type AWS::IAM::Role \\
+  --query 'resourceIdentifiers[*].resourceId'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Security Group History</div>
+          <pre><code>aws configservice get-resource-config-history \\
+  --resource-type AWS::EC2::SecurityGroup \\
+  --resource-id sg-12345678 \\
+  --later-time 2024-01-01 --earlier-time 2023-01-01</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Non-Compliant Resources</div>
+          <pre><code>aws configservice get-compliance-details-by-config-rule \\
+  --config-rule-name s3-bucket-public-read-prohibited \\
+  --compliance-types NON_COMPLIANT</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">SQL Query All S3 Buckets with Configs</div>
+          <pre><code>aws configservice select-resource-config \\
+  --expression &quot;SELECT resourceId, configuration.publicAccessBlockConfiguration
+  WHERE resourceType = 'AWS::S3::Bucket'&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Stop Configuration Recorder</div>
+          <pre><code>aws configservice stop-configuration-recorder \\
+  --configuration-recorder-name default</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete Config Rule</div>
+          <pre><code>aws configservice delete-config-rule \\
+  --config-rule-name iam-password-policy</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Public S3 Buckets</div>
+          <pre><code>aws configservice select-resource-config --expression &quot;
+SELECT resourceId, resourceType, configuration
+WHERE resourceType = 'AWS::S3::Bucket'
+AND configuration.publicAccessBlockConfiguration.blockPublicAcls = false&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Unencrypted EBS Volumes</div>
+          <pre><code>aws configservice select-resource-config --expression &quot;
+SELECT resourceId, availabilityZone, configuration.encrypted
+WHERE resourceType = 'AWS::EC2::Volume'
+AND configuration.encrypted = false&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Security Groups with 0.0.0.0/0</div>
+          <pre><code>aws configservice select-resource-config --expression &quot;
+SELECT resourceId, configuration.ipPermissions
+WHERE resourceType = 'AWS::EC2::SecurityGroup'
+AND configuration.ipPermissions.ipRanges.cidrIp = '0.0.0.0/0'&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Lambda Functions with VPC</div>
+          <pre><code>aws configservice select-resource-config --expression &quot;
+SELECT resourceId, configuration.functionName, configuration.vpcConfig
+WHERE resourceType = 'AWS::Lambda::Function'
+AND configuration.vpcConfig.subnetIds IS NOT NULL&quot;</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Config Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;config:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows full reconnaissance and can disable Config entirely</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Compliance</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;config:DescribeComplianceByConfigRule&quot;,
+      &quot;config:GetComplianceDetailsByConfigRule&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Only allows viewing compliance status, not configurations</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Write Actions</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;config:DeleteConfigRule&quot;,
+      &quot;config:StopConfigurationRecorder&quot;,
+      &quot;config:DeleteDeliveryChannel&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows disabling Config monitoring entirely</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Destructive Actions</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;config:DeleteConfigRule&quot;,
+      &quot;config:StopConfigurationRecorder&quot;,
+      &quot;config:DeleteDeliveryChannel&quot;,
+      &quot;config:DeleteConfigurationRecorder&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">SCP preventing Config from being disabled</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Protect Config with SCP</h4>
+              <p>Use Service Control Policies to prevent stopping the recorder or deleting rules.</p>
+              <pre><code>&quot;Effect&quot;: &quot;Deny&quot;,
+&quot;Action&quot;: [&quot;config:Stop*&quot;, &quot;config:Delete*&quot;]</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Encrypt Configuration Data</h4>
+              <p>Enable KMS encryption for the S3 delivery bucket and SNS topic.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor for Tampering</h4>
+              <p>Alert on StopConfigurationRecorder, DeleteConfigRule, and DeleteDeliveryChannel events.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Use Aggregators Securely</h4>
+              <p>Limit cross-account aggregator permissions and require authorization.</p>
+              <pre><code>aws configservice put-aggregation-authorization \\
+  --authorized-account-id 123456789012 \\
+  --authorized-aws-region us-east-1</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable All Resource Types</h4>
+              <p>Ensure the recorder captures all supported resource types including global resources.</p>
+              <pre><code>AllSupported: true, IncludeGlobalResourceTypes: true</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏱️</span>
+            <div>
+              <h4>Maximize Retention</h4>
+              <p>Set maximum retention period (7 years) to maintain comprehensive history.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Config Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

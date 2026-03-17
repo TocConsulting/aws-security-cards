@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS ACM Security | AWS Security Cards</title>
+<meta name="description" content="AWS Certificate Manager (ACM) handles provisioning, managing, and deploying SSL/TLS certificates. Certificates secure connections for ALB, CloudFront, API Gateway, and other AWS services.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #facc15; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/acm-card.webp" alt="AWS ACM Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/acm.svg" alt="AWS ACM Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS ACM Security</span>
+        <span class="header-badge">CERTIFICATES</span>
+      </div>
+      <p class="header-desc">AWS Certificate Manager (ACM) handles provisioning, managing, and deploying SSL/TLS certificates. Certificates secure connections for ALB, CloudFront, API Gateway, and other AWS services.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">5+</div>
+          <div class="stat-label">Attack Vectors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">TLS</div>
+          <div class="stat-label">Protocol</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">FREE</div>
+          <div class="stat-label">Public Certs</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Public Certificates</h4>
+          <p>Free SSL/TLS certificates for public-facing resources. Automatically renewed. Requires domain validation via DNS or email. Can only be used with integrated AWS services.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Integrations:</span> ALB, NLB, CloudFront, API Gateway, Elastic Beanstalk, CloudFormation</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Private Certificates</h4>
+          <p>Private CA for internal resources. Requires AWS Private CA (additional cost). Private key can be exported for use outside AWS. Supports custom validity periods.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Use cases:</span> Internal services, IoT devices, on-premises resources, containers, EC2 instances</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 55%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">5.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">ACM itself has limited direct attack surface, but certificate enumeration reveals infrastructure, and mismanaged private CAs can enable MITM attacks. Expired certificates cause service outages.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Reconnaissance</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Certificate enumeration reveals domain inventory</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> CT logs expose all issued certificates publicly</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SubjectAlternativeNames leak internal hostnames</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Wildcard certs reveal domain scope</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Certificate expiry dates for timing attacks</li></ul><h4 style="color: #f87171;">Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Private CA compromise for MITM</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Stolen private keys enable impersonation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> DNS/email validation hijacking</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Certificate pinning bypass</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploiting expired certificate errors</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Certificate Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using self-signed certs in production</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad wildcard certificates</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Expired certificates causing outages</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing certificate renewal automation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Weak cipher suites on services using cert</li></ul><h4 style="color: #fb923c;">Private CA Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Private CA key stored insecurely</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive certificate issuance</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No certificate revocation checking</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing audit logging for CA operations</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Private keys exported without encryption</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Certificates</div>
+          <pre><code>aws acm list-certificates --region us-east-1</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Certificate Details</div>
+          <pre><code>aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/xxx</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Tags for Certificate</div>
+          <pre><code>aws acm list-tags-for-certificate --certificate-arn arn:aws:acm:...:certificate/xxx</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Private CAs</div>
+          <pre><code>aws acm-pca list-certificate-authorities</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get CA Certificate</div>
+          <pre><code>aws acm-pca get-certificate-authority-certificate --certificate-authority-arn arn:aws:acm-pca:...</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🔎 CT Log Reconnaissance</h3><h4 style="color: #c084fc;">Certificate Transparency</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> All public ACM certs logged to CT</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Historical certificate data available</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Subdomain enumeration via crt.sh</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Internal hostnames in SAN fields exposed</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Staging/dev environment discovery</li></ul>
+        <div class="cmd-block">
+          <div class="cmd-title">Query crt.sh for Domain</div>
+          <pre><code>curl -s &quot;https://crt.sh/?q=%.example.com&amp;output=json&quot; | jq -r '.[].name_value' | sort -u</code></pre>
+        </div><div class="note"><strong>OSINT Tip:</strong> CT logs are a goldmine for subdomain enumeration. Use crt.sh, censys.io, or certspotter to discover all issued certificates.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔐 Private CA Attacks</h3><h4 style="color: #facc15;">CA Compromise Scenarios</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Issue rogue certificates for any domain</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create backdoor certificates for MITM</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Sign malicious code with CA cert</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable certificate revocation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify CA certificate templates</li></ul><h4 style="color: #facc15;">Post-Compromise Actions</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> MITM internal service traffic</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Impersonate internal services</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Sign malware as trusted software</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Persist via long-lived certificates</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access encrypted data streams</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RequestCertificate - new cert request</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteCertificate - cert deletion</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ExportCertificate - private key export</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IssueCertificate - private CA issuance</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RevokeCertificate - cert revocation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateCertificateAuthority - new private CA</li></ul><h4 style="color: #4ade80;">Monitoring</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Certificate expiration alerts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual certificate issuance patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Private key export events</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CA configuration changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed validation attempts</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Get All Certificate ARNs</div>
+          <pre><code>aws acm list-certificates --query 'CertificateSummaryList[*].CertificateArn' --output text</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Certificate Domains</div>
+          <pre><code>aws acm list-certificates --query 'CertificateSummaryList[*].[DomainName,SubjectAlternativeNameSummaries]' --output table</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Find Expiring Certificates</div>
+          <pre><code>aws acm list-certificates --certificate-statuses ISSUED --query 'CertificateSummaryList[?NotAfter&lt;=\`2024-12-31\`]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Export Private Cert (if allowed)</div>
+          <pre><code>aws acm export-certificate \\
+  --certificate-arn arn:aws:acm:...:certificate/xxx \\
+  --passphrase $(echo -n 'password' | base64)</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">CT Log Query - crt.sh</div>
+          <pre><code>curl -s &quot;https://crt.sh/?q=%.target.com&amp;output=json&quot; | \\
+  jq -r '.[].name_value' | sort -u</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Resources Using Cert</div>
+          <pre><code>aws acm describe-certificate \\
+  --certificate-arn arn:aws:acm:...:certificate/xxx \\
+  --query 'Certificate.InUseBy'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Overly Permissive ACM Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;acm:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full ACM access allows certificate deletion, private key export, and private CA management</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Read-Only Certificate Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;acm:DescribeCertificate&quot;,
+      &quot;acm:ListCertificates&quot;,
+      &quot;acm:ListTagsForCertificate&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access for monitoring and inventory purposes</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous Private CA Permissions</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;acm-pca:IssueCertificate&quot;,
+      &quot;acm-pca:GetCertificate&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Ability to issue certificates from any private CA enables MITM attacks</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Scoped Private CA Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;acm-pca:IssueCertificate&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:acm-pca:*:*:certificate-authority/specific-ca-id&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;acm-pca:TemplateArn&quot;: &quot;arn:aws:acm-pca:::template/EndEntityCertificate/V1&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Restricted to specific CA and certificate template</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Certificate Expiration</h4>
+              <p>Set up CloudWatch alarms for certificates expiring within 30 days.</p>
+              <pre><code>aws cloudwatch put-metric-alarm \\
+  --alarm-name CertExpiringSoon \\
+  --metric-name DaysToExpiry \\
+  --namespace AWS/CertificateManager \\
+  --threshold 30 --comparison-operator LessThanThreshold</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Restrict Export Permissions</h4>
+              <p>Prevent private key export by denying acm:ExportCertificate action.</p>
+              <pre><code>{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: &quot;acm:ExportCertificate&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏷️</span>
+            <div>
+              <h4>Use Separate Certs per Environment</h4>
+              <p>Don't use the same wildcard certificate across prod/staging/dev.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable CloudTrail Logging</h4>
+              <p>Log all ACM and ACM-PCA API calls for audit trail.</p>
+              <pre><code>aws cloudtrail put-event-selectors \\
+  --trail-name main-trail \\
+  --event-selectors '[{&quot;DataResources&quot;:[{&quot;Type&quot;:&quot;AWS::ACM::Certificate&quot;}]}]'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Secure Private CA</h4>
+              <p>Use HSM-backed keys and restrict IssueCertificate permissions to specific templates.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⚡</span>
+            <div>
+              <h4>Automate Certificate Renewal</h4>
+              <p>Use DNS validation with Route 53 for automatic renewal without manual intervention.</p>
+              <pre><code>aws acm request-certificate \\
+  --domain-name example.com \\
+  --validation-method DNS \\
+  --domain-validation-options DomainName=example.com,ValidationDomain=example.com</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS ACM Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Amplify Security | AWS Security Cards</title>
+<meta name="description" content="AWS Amplify hosts web apps and provides backend services. Security risks include environment variable exposure, API key leakage in JavaScript bundles, and build log secrets.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/amplify-card.webp" alt="AWS Amplify Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/amplify.svg" alt="AWS Amplify Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Amplify Security</span>
+        <span class="header-badge">FRONTEND</span>
+      </div>
+      <p class="header-desc">AWS Amplify hosts web apps and provides backend services. Security risks include environment variable exposure, API key leakage in JavaScript bundles, and build log secrets.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Global</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">SPA/SSR</div>
+          <div class="stat-label">App Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">CI/CD</div>
+          <div class="stat-label">Deployment</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Amplify Hosting</h4>
+          <p>Hosts static websites and SSR apps. Connects to GitHub, GitLab, Bitbucket for CI/CD. Environment variables configured per branch. Builds run in AWS-managed containers.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Build logs often contain secrets. Environment variables can be exposed via client-side JavaScript if prefixed wrong.</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Amplify Backend</h4>
+          <p>Provisions AppSync, Cognito, S3, Lambda backends. amplify-cli generates aws-exports.js with pool IDs, API endpoints. Gen 2 uses CDK under the hood.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> aws-exports.js bundled in client exposes Cognito pool IDs, GraphQL endpoints, S3 buckets - recon goldmine</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 60%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Amplify apps often expose sensitive configuration in client bundles. Build environments may leak credentials. Connected repos provide source code access. Backend misconfigurations enable data theft.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Client-Side Exposure</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> API keys in JavaScript bundles</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> aws-exports.js configuration leak</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Environment variables in window object</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Source maps exposing code</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> GraphQL introspection enabled</li></ul><h4 style="color: #f87171;">Build/Deploy Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Build log secrets exposure</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> GitHub token from connection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> PR preview branch injection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> amplify.yml command injection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Webhook secret theft</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Environment Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> REACT_APP_ prefix exposes to client</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> NEXT_PUBLIC_ variables with secrets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Build-time secrets not cleared</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Same env vars for all branches</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Production secrets in preview branches</li></ul><h4 style="color: #fb923c;">Backend Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cognito allows self-signup</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> GraphQL auth rules too permissive</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 bucket public access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Lambda function role overly broad</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> API Gateway no authorization</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Apps</div>
+          <pre><code>aws amplify list-apps</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get App Details</div>
+          <pre><code>aws amplify get-app --app-id APP_ID</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Branches</div>
+          <pre><code>aws amplify list-branches --app-id APP_ID</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Branch (includes env vars)</div>
+          <pre><code>aws amplify get-branch \\
+  --app-id APP_ID --branch-name main</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Jobs (build history)</div>
+          <pre><code>aws amplify list-jobs \\
+  --app-id APP_ID --branch-name main</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">From Client Exposure</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Cognito Pool ID → User enumeration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GraphQL endpoint → Data theft</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> API Key → Backend access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> S3 bucket → File access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Identity Pool → AWS credentials</li></ul><h4 style="color: #c084fc;">Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> aws-exports.js → Cognito → Identity Pool → AWS creds</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Build logs → Database URL → Data access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GitHub connection → Repo access → Code secrets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GraphQL introspection → Schema → Data queries</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Preview branch → Inject code → Steal prod secrets</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">📊 Data Exposure</h3><h4 style="color: #facc15;">Client Bundle Secrets</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> AWS Cognito User Pool ID</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> AWS Cognito Identity Pool ID</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> GraphQL/AppSync endpoint</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> S3 bucket names</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> API Gateway URLs and keys</li></ul><h4 style="color: #facc15;">Build Environment</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> DATABASE_URL with credentials</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> STRIPE_SECRET_KEY</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> GITHUB_TOKEN</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> AWS_ACCESS_KEY_ID (anti-pattern)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Third-party API keys</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApp - new app</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateApp - config changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateBranch - new branch</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> StartJob - build triggered</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetBranch - env var access attempt</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual GetBranch API calls</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Build jobs from unknown IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New branches with suspicious names</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Environment variable changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Webhook modifications</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Get Environment Variables</div>
+          <pre><code>aws amplify get-branch \\
+  --app-id APP_ID --branch-name main \\
+  --query 'branch.environmentVariables'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Download Build Artifacts</div>
+          <pre><code>aws amplify get-job \\
+  --app-id APP_ID --branch-name main \\
+  --job-id JOB_ID --query 'job.steps[*].artifactsUrl'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Extract aws-exports.js (from deployed app)</div>
+          <pre><code>curl https://app.example.com/aws-exports.js</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">GraphQL Introspection</div>
+          <pre><code>curl -X POST GRAPHQL_ENDPOINT \\
+  -H &quot;Content-Type: application/json&quot; \\
+  -d '{&quot;query&quot;: &quot;{ __schema { types { name } } }&quot;}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Job Logs (build logs)</div>
+          <pre><code>aws amplify get-job \\
+  --app-id APP_ID --branch-name main \\
+  --job-id JOB_ID</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Start Build (trigger deployment)</div>
+          <pre><code>aws amplify start-job \\
+  --app-id APP_ID --branch-name main \\
+  --job-type RELEASE</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;amplify:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full Amplify access - can read env vars, trigger builds, modify apps</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read Only Monitoring</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;amplify:ListApps&quot;,
+    &quot;amplify:GetApp&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Only list and describe apps - no env var or build access</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Risky - Branch Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;amplify:GetBranch&quot;,
+    &quot;amplify:UpdateBranch&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Can read and modify environment variables</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Env Var Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: [
+    &quot;amplify:GetBranch&quot;,
+    &quot;amplify:UpdateBranch&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringNotEquals&quot;: {&quot;aws:PrincipalTag/team&quot;: &quot;devops&quot;}
+  }
+}</code></pre>
+          <p class="policy-desc">Only DevOps team can access branch settings</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Use Secrets Manager</h4>
+              <p>Store secrets in Secrets Manager, fetch at build time, don't expose to client.</p>
+              <pre><code>aws secretsmanager get-secret-value --secret-id prod/db</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>No Client-Side Secrets</h4>
+              <p>Never prefix secrets with REACT_APP_, NEXT_PUBLIC_, or VITE_.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Separate Branch Environments</h4>
+              <p>Use different secrets for preview vs production branches.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Review Build Logs</h4>
+              <p>Audit build logs for secret exposure. Use secret masking.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>Cognito Security</h4>
+              <p>Disable self-signup if not needed. Enable MFA. Use hosted UI.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Disable GraphQL Introspection</h4>
+              <p>Disable introspection in production AppSync APIs.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Amplify Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

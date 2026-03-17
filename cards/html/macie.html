@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Macie Security | AWS Security Cards</title>
+<meta name="description" content="Amazon Macie uses machine learning to discover and protect sensitive data in S3. It detects PII, credentials, and financial data. Attackers can disable Macie with a single API call, delete custom data identifiers, and suppress findings.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #a855f715, #0a0e1a, #6366f115);
+    border: 1px solid #a855f74d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #a855f70d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #a855f733;
+    color: #a855f7;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #a855f74d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/macie-card.webp" alt="AWS Macie Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/macie.svg" alt="AWS Macie Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Macie Security</span>
+        <span class="header-badge">DATA SECURITY</span>
+      </div>
+      <p class="header-desc">Amazon Macie uses machine learning to discover and protect sensitive data in S3. It detects PII, credentials, and financial data. Attackers can disable Macie with a single API call, delete custom data identifiers, and suppress findings.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">1 API</div>
+          <div class="stat-label">To Disable</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">S3 Only</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">ML-Based</div>
+          <div class="stat-label">Detection</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Regional</div>
+          <div class="stat-label">Per-Region</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#a855f7;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #a855f7;">Sensitive Data Discovery</h4>
+          <p>Macie scans S3 objects to find PII (SSNs, credit cards, passport numbers), credentials (API keys, private keys), and financial data. It is the only AWS service that examines actual object content for hardcoded secrets and sensitive data.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">Classification Jobs</h4>
+          <p>Classification jobs scan S3 buckets on schedule or one-time. Custom data identifiers extend detection with regex patterns for organization-specific data. Jobs can be paused, cancelled, or deleted by an attacker to stop ongoing detection.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">Findings &amp; Suppression</h4>
+          <p>Findings report sensitive data locations and policy violations. Suppression rules automatically archive matching findings. Without org delegated admin, member accounts can disable Macie independently. Macie is not enabled by default.</p>
+          
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Macie can be disabled with a single API call (disable-macie). It is region-scoped and not enabled by default, meaning many accounts have never run it. Findings can be suppressed silently and custom data identifiers deleted.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Disable Detection</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> disable-macie with a single API call stops all detection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cancel or pause active classification jobs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete custom data identifiers to remove org-specific detection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create suppression rules to auto-archive findings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disassociate from administrator account to escape oversight</li></ul><h4 style="color: #f87171;">Reconnaissance via Findings</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> list-findings reveals buckets containing sensitive data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Findings show exact S3 object paths with credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bucket statistics expose data classification summary</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Custom data identifiers reveal what org considers sensitive</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Classification results stored in S3 may be misconfigured</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Coverage Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Macie not enabled at all (not on by default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Not enabled in all regions (region-scoped)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Classification jobs not running or paused</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Not all S3 buckets included in classification scope</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Custom data identifiers not configured for org-specific data</li></ul><h4 style="color: #fb923c;">Management Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No delegated admin - member accounts disable independently</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Classification results S3 bucket publicly accessible</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Findings not exported to Security Hub</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No alerting when Macie is disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Suppression rules too broad, hiding real findings</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Macie Status</div>
+          <pre><code>aws macie2 get-macie-session</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List S3 Buckets with Stats</div>
+          <pre><code>aws macie2 describe-buckets</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Findings (Sensitive Data Locations)</div>
+          <pre><code>aws macie2 list-findings \\
+  --finding-criteria '{&quot;criterion&quot;:{&quot;category&quot;:{&quot;eq&quot;:[&quot;CLASSIFICATION&quot;]}}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Classification Jobs</div>
+          <pre><code>aws macie2 list-classification-jobs</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Custom Data Identifiers</div>
+          <pre><code>aws macie2 list-custom-data-identifiers</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🚨 Key Concepts</h3><h4 style="color: #c084fc;">Unique Detection Capabilities</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Only service that finds credentials hardcoded in S3 objects</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Detects PII, financial data, health records in stored data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Custom data identifiers use regex for org-specific patterns</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Classification results show exact file paths and data types</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Bucket-level statistics reveal sensitive data distribution</li></ul><h4 style="color: #c084fc;">Architectural Weaknesses</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Region-scoped: disabling in one region leaves blind spot</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Not enabled by default: many accounts never ran it</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Single API call (disable-macie) stops all detection</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Classification results stored in S3 can be misconfigured</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Without delegated admin, each member controls their own Macie</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">⚡ Persistence Techniques</h3><h4 style="color: #facc15;">Suppression Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create suppression rules for specific finding types</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Suppress by bucket name to hide attacker data stores</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Broad suppression criteria cover future findings too</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete custom data identifiers silently</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify classification job scope to exclude attacker buckets</li></ul><h4 style="color: #facc15;">Detection Evasion</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable Macie in specific regions only</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Pause classification jobs instead of deleting (less obvious)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Store exfiltrated data in buckets excluded from scanning</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Encrypt objects with attacker KMS key (Macie cannot read)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cancel scheduled jobs to prevent future scans</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableMacie - Macie disabled entirely</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateFindingsFilter - suppression rule created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteCustomDataIdentifier - detection pattern deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateClassificationJob - job paused or cancelled</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisassociateFromAdministratorAccount - escaped admin</li></ul><h4 style="color: #4ade80;">Indicators of Tampering</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Macie disabled in one or more regions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Classification jobs paused or cancelled unexpectedly</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Custom data identifiers deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New suppression rules with broad criteria</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Findings count drops sharply without remediation</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Disable Macie</div>
+          <pre><code>aws macie2 disable-macie</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete Custom Data Identifier</div>
+          <pre><code>aws macie2 delete-custom-data-identifier \\
+  --id cdi-abc123def456</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Suppression Rule</div>
+          <pre><code>aws macie2 create-findings-filter \\
+  --name &quot;SuppressAll&quot; \\
+  --action ARCHIVE \\
+  --finding-criteria '{&quot;criterion&quot;:{&quot;category&quot;:{&quot;eq&quot;:[&quot;CLASSIFICATION&quot;]}}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Pause Classification Job</div>
+          <pre><code>aws macie2 update-classification-job \\
+  --job-id job-abc123 \\
+  --job-status USER_PAUSED</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Recon: Find Buckets with Credentials</div>
+          <pre><code>aws macie2 list-findings --finding-criteria '{&quot;criterion&quot;:{&quot;type&quot;:{&quot;eq&quot;:[&quot;SensitiveData:S3Object/Credentials&quot;]}}}' --query 'findingIds' --output text | xargs -I {} aws macie2 get-findings --finding-ids {}</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Disassociate from Admin Account</div>
+          <pre><code>aws macie2 disassociate-from-administrator-account</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Can Disable Macie</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;macie2:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full Macie access allows disabling the service, deleting data identifiers, and creating suppression rules</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Findings Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;macie2:Get*&quot;,
+      &quot;macie2:List*&quot;,
+      &quot;macie2:Describe*&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access for security teams to review findings without modification rights</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Can Suppress Findings</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;macie2:CreateFindingsFilter&quot;,
+      &quot;macie2:UpdateFindingsFilter&quot;,
+      &quot;macie2:DeleteCustomDataIdentifier&quot;,
+      &quot;macie2:UpdateClassificationJob&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Can create suppression rules, delete custom identifiers, and pause classification jobs to hide sensitive data findings</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - SCP Prevent Disable</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;PreventMacieDisable&quot;,
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;macie2:DisableMacie&quot;,
+      &quot;macie2:DisassociateFromAdministratorAccount&quot;,
+      &quot;macie2:DeleteCustomDataIdentifier&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Organization SCP prevents member accounts from disabling Macie or removing custom detection patterns</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏢</span>
+            <div>
+              <h4>Use Org Delegated Admin</h4>
+              <p>Centralize Macie management so member accounts cannot disable it independently.</p>
+              <pre><code>aws macie2 enable-organization-admin-account \\
+  --admin-account-id 123456789012</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>SCP Prevent Disable</h4>
+              <p>Use SCPs to deny DisableMacie and DisassociateFromAdministratorAccount in all member accounts.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Export Findings to Security Hub</h4>
+              <p>Send Macie findings to Security Hub so they persist independently and feed into centralized monitoring.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌍</span>
+            <div>
+              <h4>Enable in All Regions</h4>
+              <p>Macie is regional. Enable it in every region where S3 buckets exist to avoid blind spots.</p>
+              <pre><code>for region in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do
+  aws macie2 enable-macie --region $region 2&gt;/dev/null
+done</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Monitor Macie Status</h4>
+              <p>Alert on DisableMacie, DeleteCustomDataIdentifier, and CreateFindingsFilter CloudTrail events.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Secure Classification Results Bucket</h4>
+              <p>Ensure the S3 bucket storing Macie classification results has proper access controls and encryption.</p>
+              <pre><code>aws s3api put-public-access-block \\
+  --bucket macie-results-bucket \\
+  --public-access-block-configuration \\
+  BlockPublicAcls=true,IgnorePublicAcls=true,\\
+BlockPublicPolicy=true,RestrictPublicBuckets=true</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Macie Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

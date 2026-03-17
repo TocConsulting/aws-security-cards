@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS STS Security | AWS Security Cards</title>
+<meta name="description" content="Security Token Service (STS) provides temporary credentials for assuming IAM roles. The core of AWS identity - overly permissive trust policies enable cross-account attacks and privilege escalation.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #a855f715, #0a0e1a, #6366f115);
+    border: 1px solid #a855f74d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #a855f70d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #a855f733;
+    color: #a855f7;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #a855f74d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/sts-card.webp" alt="AWS STS Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/sts.svg" alt="AWS STS Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS STS Security</span>
+        <span class="header-badge">IDENTITY</span>
+      </div>
+      <p class="header-desc">Security Token Service (STS) provides temporary credentials for assuming IAM roles. The core of AWS identity - overly permissive trust policies enable cross-account attacks and privilege escalation.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Global</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Temp</div>
+          <div class="stat-label">Credentials</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">15m-12h</div>
+          <div class="stat-label">Duration</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#a855f7;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #a855f7;">AssumeRole</h4>
+          <p>Exchange long-term credentials for temporary session credentials. Trust policies control who can assume the role. Used for cross-account access and privilege delegation.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> Overly permissive trust policies (Principal: *) allow any AWS account to assume the role</div>
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">Federation</h4>
+          <p>AssumeRoleWithSAML and AssumeRoleWithWebIdentity enable external identity providers (Okta, OIDC) to exchange tokens for AWS credentials.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> SAML assertion manipulation and OIDC token theft enable privilege escalation</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 95%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">STS is the core of AWS identity and the primary mechanism for lateral movement. Misconfigured trust policies enable cross-account attacks. Role chaining amplifies impact.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Trust Policy Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Overly permissive trust policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Missing ExternalId condition</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account role chaining</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Confused deputy attacks</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Principal: * allowing any account</li></ul><h4 style="color: #f87171;">Credential Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Session token theft from IMDS</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> IRSA token extraction from pods</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SAML assertion replay/manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Web identity token theft</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Environment variable extraction</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Trust Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Principal: * in trust policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No MFA requirement for assume</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Long session duration (12h)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing source identity conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No IP restriction in trust</li></ul><h4 style="color: #fb923c;">Role Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive IAM policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Service-linked roles accessible</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing permission boundaries</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No session policy restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Allows cross-account without ExternalId</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Caller Identity</div>
+          <pre><code>aws sts get-caller-identity</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Assumable Roles</div>
+          <pre><code>aws iam list-roles \\
+  --query 'Roles[?AssumeRolePolicyDocument]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Trust Policy</div>
+          <pre><code>aws iam get-role --role-name &lt;role&gt; \\
+  --query 'Role.AssumeRolePolicyDocument'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Session Token</div>
+          <pre><code>aws sts get-session-token \\
+  --duration-seconds 3600</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Role Assumption</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AssumeRole to higher privilege</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Role chaining across accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Assume service-linked roles</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Web identity federation abuse</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SAML assertion manipulation</li></ul><h4 style="color: #c084fc;">Attack Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Dev account -&gt; Prod via trust</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> External account -&gt; Internal role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Lambda execution role pivot</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> EC2 instance role escalation</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Cross-account admin access</li></ul><div class="note"><strong>Key Target:</strong> Roles with Principal: * or missing ExternalId can be assumed from any AWS account.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Trust Policy Backdoors</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify trust policy for backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add external account to trust</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create assumable role</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Federation provider backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> OIDC identity provider injection</li></ul><h4 style="color: #facc15;">Session Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Session token refresh loop</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Long duration sessions (12h)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Automated re-assumption</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Multiple role chains active</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cached credentials abuse</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssumeRole - role assumed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssumeRoleWithSAML - SAML federation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssumeRoleWithWebIdentity - OIDC</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetSessionToken - temp creds</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetCallerIdentity - identity check</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Cross-account role assumption</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual session durations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed AssumeRole attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Trust policy modifications</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New OIDC/SAML providers</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Assume Role</div>
+          <pre><code>aws sts assume-role \\
+  --role-arn arn:aws:iam::&lt;target&gt;:role/&lt;role&gt; \\
+  --role-session-name pwned</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Assume with ExternalId</div>
+          <pre><code>aws sts assume-role \\
+  --role-arn &lt;arn&gt; \\
+  --external-id &lt;id&gt; \\
+  --role-session-name pwned</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Web Identity Assume</div>
+          <pre><code>aws sts assume-role-with-web-identity \\
+  --role-arn &lt;arn&gt; \\
+  --web-identity-token &lt;token&gt; \\
+  --role-session-name pwned</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Federation Token</div>
+          <pre><code>aws sts get-federation-token \\
+  --name attacker \\
+  --policy '{&quot;Version&quot;:&quot;2012-10-17&quot;,...}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Decode Authorization Message</div>
+          <pre><code>aws sts decode-authorization-message \\
+  --encoded-message &lt;message&gt;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Test Role Assumption</div>
+          <pre><code>for role in $(aws iam list-roles --query 'Roles[].Arn' --output text); do
+  aws sts assume-role --role-arn $role --role-session-name test 2&gt;/dev/null &amp;&amp; echo &quot;SUCCESS: $role&quot;
+done</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Any Account Can Assume</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;AWS&quot;: &quot;*&quot;},
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;
+  }]
+}
+// ANY AWS account can assume this role!</code></pre>
+          <p class="policy-desc">Anyone with an AWS account can assume this role - complete compromise</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Restricted with ExternalId and MFA</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;AWS&quot;: &quot;arn:aws:iam::123456789012:root&quot;
+    },
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;sts:ExternalId&quot;: &quot;unique-secret-id&quot;
+      },
+      &quot;Bool&quot;: {&quot;aws:MultiFactorAuthPresent&quot;: &quot;true&quot;}
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Specific account only, requires ExternalId and MFA</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Always Use ExternalId</h4>
+              <p>Prevent confused deputy attacks with unique external IDs.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;StringEquals&quot;: {
+  &quot;sts:ExternalId&quot;: &quot;unique-secret-12345&quot;
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📱</span>
+            <div>
+              <h4>Require MFA for AssumeRole</h4>
+              <p>Add MFA condition to sensitive roles for additional verification.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;Bool&quot;: {
+  &quot;aws:MultiFactorAuthPresent&quot;: &quot;true&quot;
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏱️</span>
+            <div>
+              <h4>Limit Session Duration</h4>
+              <p>Reduce exposure window by limiting maximum session duration.</p>
+              <pre><code>aws iam update-role --role-name &lt;role&gt; \\
+  --max-session-duration 3600</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏷️</span>
+            <div>
+              <h4>Source Identity Tracking</h4>
+              <p>Track original identity through role chains for auditing.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;StringLike&quot;: {
+  &quot;sts:SourceIdentity&quot;: &quot;admin-*&quot;
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Restrict by Source IP</h4>
+              <p>Limit where role can be assumed from using IP conditions.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;IpAddress&quot;: {
+  &quot;aws:SourceIp&quot;: &quot;203.0.113.0/24&quot;
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor AssumeRole Events</h4>
+              <p>Alert on cross-account assumptions and unusual patterns.</p>
+              <pre><code>CloudWatch Alarm: sts:AssumeRole where sourceAccount != targetAccount</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS STS Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

