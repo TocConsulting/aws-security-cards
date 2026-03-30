@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon Verified Permissions Security | AWS Security Cards</title>
+<meta name="description" content="Amazon Verified Permissions is a fine-grained authorization service using Cedar policy language. Misconfigurations can lead to authorization bypass in applications.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #a855f715, #0a0e1a, #c084fc15);
+    border: 1px solid #a855f74d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #a855f70d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #a855f733;
+    color: #a855f7;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #a855f74d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/verifiedpermissions-card.webp" alt="Amazon Verified Permissions Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/verifiedpermissions.svg" alt="Amazon Verified Permissions Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">Amazon Verified Permissions Security</span>
+        <span class="header-badge">IDENTITY</span>
+      </div>
+      <p class="header-desc">Amazon Verified Permissions is a fully managed, fine-grained authorization service for custom applications. It uses the Cedar policy language to define permissions and make authorization decisions. Applications call IsAuthorized to evaluate Cedar policies stored in a policy store.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f59e0b;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">10+</div>
+          <div class="stat-label">Attack Vectors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Cedar</div>
+          <div class="stat-label">Policy Language</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">RBAC + ABAC</div>
+          <div class="stat-label">Auth Model</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#a855f7;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #a855f7;">Policy Stores &amp; Cedar Policies</h4>
+          <p>Policy stores hold Cedar policies, schemas, and identity sources. Cedar uses explicit permit and forbid effects with default-deny. Any forbid match results in Deny; else any permit match results in Allow; otherwise Deny.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> An overly broad permit(principal, action, resource) with no conditions allows any authenticated user to perform any action on any resource -- the Cedar equivalent of IAM Allow *.</div>
+        </div>
+        <div>
+          <h4 style="color: #a855f7;">Identity Sources &amp; Integration</h4>
+          <p>Identity sources connect Cognito user pools or OIDC providers to policy stores. IsAuthorizedWithToken accepts ID/access tokens directly and maps claims to Cedar entities.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> If an attacker can inject Cedar policies via CreatePolicy, they can create permit(principal, action, resource) granting themselves full access to every application resource.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 60%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Verified Permissions is an application-layer authorization service. It does not directly control AWS resources. However, misconfigurations in Cedar policies, schemas, or identity source mappings can lead to authorization bypass in the applications that rely on it.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Cedar Policy Logic Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit gaps between permit and missing forbid policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse wildcard scopes in Cedar policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Principal identifier reuse (human-readable vs UUID)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Overly broad policy templates when instantiated</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Missing unless conditions on permit policies</li></ul><h4 style="color: #f87171;">Infrastructure Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate policies and schemas to map auth model</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Tamper with identity source token claims</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit disabled schema validation (mode=OFF)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject policies via verifiedpermissions:CreatePolicy</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bypass Verified Permissions if app skips IsAuthorized</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Cedar Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Schema validation set to OFF in production</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad permit with no constraints</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Human-readable identifiers (User::"jane") instead of UUIDs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing forbid policies for sensitive actions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Templates with unscoped placeholders</li></ul><h4 style="color: #fb923c;">Infrastructure Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM granting verifiedpermissions:* to app roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No separation between read (IsAuthorized) and write (CreatePolicy)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Identity source without client ID restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> CloudTrail data events not enabled for IsAuthorized</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No monitoring on policy store modifications</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+          <div class="cmd-title">List All Policy Stores</div>
+          <pre><code>aws verifiedpermissions list-policy-stores</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List All Policies in a Store</div>
+          <pre><code>aws verifiedpermissions list-policies \
+  --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get a Specific Policy</div>
+          <pre><code>aws verifiedpermissions get-policy \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --policy-id SPEXAMPLEabcdefg111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get the Schema</div>
+          <pre><code>aws verifiedpermissions get-schema \
+  --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Identity Sources</div>
+          <pre><code>aws verifiedpermissions list-identity-sources \
+  --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Cedar Policy Injection</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreatePolicy to inject blanket permit(principal, action, resource)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> UpdatePolicy to widen scope of existing policies</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PutSchema to add new entity types/actions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Delete forbid policies to weaken controls</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create template-linked policies with broad templates</li></ul><h4 style="color: #c084fc;">Application-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Principal identifier reuse (inherit former user permissions)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse Cognito group claims mapped to Cedar entities</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit missing IsAuthorized checks on endpoints</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Probe authorization decisions via IsAuthorized API</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Analyze policies offline to find authorization gaps</li></ul><div class="note"><strong>Key insight:</strong> Enumerate the full policy set with list-policies and get-policy, then analyze Cedar logic offline to find gaps -- actions with no forbid and overly broad permits.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Policy Manipulation</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject persistent permit policies in policy store</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete forbid policies that restrict access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify schema to add attacker-controlled entity types</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create template-linked policies from broad templates</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register identity sources with attacker OIDC provider</li></ul><h4 style="color: #facc15;">Identity-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Reuse identifiers of deleted principals</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add attacker to Cognito groups mapped to Cedar permissions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain access via identity source token issuance</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional policy stores for parallel access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify validation to OFF to accept malformed policies</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">Management Events (Default)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreatePolicy - new policy added</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeletePolicy - policy removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdatePolicy - policy modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutSchema - schema updated</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateIdentitySource - identity source added</li></ul><h4 style="color: #4ade80;">Data Events (Must Enable)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IsAuthorized - authorization decision requested</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IsAuthorizedWithToken - token-based auth decision</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> BatchIsAuthorized - batch authorization decisions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Spike in DENY results (authorization probing)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual CreatePolicy from non-pipeline principals</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
+          <div class="cmd-title">Inject Blanket Permit Policy</div>
+          <pre><code>aws verifiedpermissions create-policy \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --definition '{"static":{"statement":"permit(principal, action, resource);","description":"backdoor"}}'</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Delete a Forbid Policy</div>
+          <pre><code>aws verifiedpermissions delete-policy \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --policy-id SPEXAMPLEforbid111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Test Authorization Decision</div>
+          <pre><code>aws verifiedpermissions is-authorized \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --principal entityType=User,entityId=attacker \
+  --action actionType=Action,actionId=admin \
+  --resource entityType=Resource,entityId=sensitive</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Disable Schema Validation</div>
+          <pre><code>aws verifiedpermissions update-policy-store \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --validation-settings &quot;mode=OFF&quot;</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Verified Permissions Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;verifiedpermissions:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Grants ability to create, modify, and delete policies, schemas, and identity sources -- can rewrite entire auth model</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Application Auth Only</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;verifiedpermissions:IsAuthorized&quot;,
+    &quot;verifiedpermissions:IsAuthorizedWithToken&quot;,
+    &quot;verifiedpermissions:BatchIsAuthorized&quot;
+  ],
+  &quot;Resource&quot;: &quot;arn:aws:verifiedpermissions::*:policy-store/PSEXAMPLEabcdefg111111&quot;
+}</code></pre>
+          <p class="policy-desc">Application role can only make authorization decisions. Cannot modify policies, schemas, or identity sources.</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Cedar Blanket Permit</span>
+          </div>
+          <pre><code>permit(principal, action, resource);</code></pre>
+          <p class="policy-desc">Allows any principal to perform any action on any resource. The Cedar equivalent of IAM Allow *.</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x2705;</span>
+            <div>
+              <h4>Enable STRICT Schema Validation</h4>
+              <p>Always enable STRICT validation in production to ensure policies are validated against the schema.</p>
+              <pre><code>aws verifiedpermissions update-policy-store \
+  --policy-store-id PSEXAMPLEabcdefg111111 \
+  --validation-settings &quot;mode=STRICT&quot;</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F512;</span>
+            <div>
+              <h4>Separate Auth vs Admin IAM Permissions</h4>
+              <p>Grant app roles only IsAuthorized. Reserve CreatePolicy, UpdatePolicy, PutSchema for deployment pipelines.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F4DD;</span>
+            <div>
+              <h4>Enable CloudTrail Data Events</h4>
+              <p>IsAuthorized and IsAuthorizedWithToken are data events not logged by default. Enable explicitly.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F194;</span>
+            <div>
+              <h4>Use UUIDs for All Entity Identifiers</h4>
+              <p>Never use human-readable names that can be reassigned. Use UUIDs for all principals and resources.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F6AB;</span>
+            <div>
+              <h4>Implement Forbid Policies for Sensitive Actions</h4>
+              <p>Do not rely solely on absence of permits. Create explicit forbid policies for sensitive actions.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F4BB;</span>
+            <div>
+              <h4>Manage Policies as Code</h4>
+              <p>Store Cedar policies in version control. Use CI/CD pipelines with code review for all policy changes.</p>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>Amazon Verified Permissions Security Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

