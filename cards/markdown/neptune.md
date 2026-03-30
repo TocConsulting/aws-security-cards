@@ -1,8 +1,11 @@
-# Amazon Neptune Security
+# <img src="../icons/neptune.svg" width="32" alt="Amazon Neptune Security"> Amazon Neptune Security
+
+![Amazon Neptune Security](../images/neptune-card.webp)
 
 > **Category**: DATABASE
 
 Amazon Neptune is a managed graph database service supporting Apache TinkerPop Gremlin, W3C SPARQL, and openCypher query languages. All access is through a single port (8182) via HTTPS, WebSocket (Gremlin), and Bolt (openCypher) protocols. Neptune clusters run exclusively inside a VPC, but public endpoints can be enabled. The bulk loader ingests data from S3 via an IAM role attached to the cluster.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ Amazon Neptune is a managed graph database service supporting Apache TinkerPop G
 | --- | --- | --- | --- |
 | **HIGH** | **Regional (VPC)** | **Gremlin / SPARQL / openCypher** | **KMS** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Graph Data Access
 
@@ -161,7 +164,7 @@ aws neptune describe-event-subscriptions
 - Connections from unexpected source IPs
 - Bulk loader requests referencing external S3 buckets
 
-## Exploitation Commands
+## 💻 Exploitation Commands
 
 **Share Snapshot to Attacker Account**
 ```bash
@@ -208,7 +211,7 @@ curl -X POST https://NEPTUNE_ENDPOINT:8182/gremlin \
   -d '{"gremlin":"g.V().valueMap(true).toList()"}'
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### ❌ Dangerous - No IAM Auth, No Encryption, No Audit Logs
 
@@ -273,7 +276,7 @@ curl -X POST https://NEPTUNE_ENDPOINT:8182/gremlin \
 
 *Only application server security group can connect to Neptune.*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 🔐 Enable IAM Authentication
 

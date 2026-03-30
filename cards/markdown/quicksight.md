@@ -1,8 +1,11 @@
-# Amazon QuickSight Security
+# <img src="../icons/quicksight.svg" width="32" alt="Amazon QuickSight Security"> Amazon QuickSight Security
+
+![Amazon QuickSight Security](../images/quicksight-card.webp)
 
 > **Category**: ANALYTICS
 
 Amazon QuickSight is a serverless, cloud-scale business intelligence (BI) service. Attackers target QuickSight to access visualized business data, exploit data source connections to reach backend databases, exfiltrate SPICE dataset contents, and abuse embedded dashboard URLs to leak sensitive analytics to unauthorized parties.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ Amazon QuickSight is a serverless, cloud-scale business intelligence (BI) servic
 | --- | --- | --- | --- |
 | **HIGH** | **Per GB (see pricing page)** | **URL Leak** | **Namespaces** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Data Sources & SPICE Datasets
 
@@ -189,7 +192,7 @@ aws quicksight list-analyses \
 - Embedded URL generation from unexpected principals
 - Permission grants to previously unknown users or groups
 
-## Exploitation Commands
+## 💻 Exploitation Commands
 
 **Register Attacker as QuickSight Admin**
 ```bash
@@ -235,7 +238,7 @@ aws quicksight search-dashboards \
   --filters '[{"Operator":"StringLike","Name":"QUICKSIGHT_VIEWER_OR_OWNER","Value":"arn:aws:quicksight:us-east-1:123456789012:user/default/attacker"}]'
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### ❌ Dangerous - Full QuickSight Access
 
@@ -309,7 +312,7 @@ aws quicksight search-dashboards \
 
 *Author limited to approved data sources only, preventing creation of rogue data source connections*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 🔒 Enable Row-Level and Column-Level Security
 

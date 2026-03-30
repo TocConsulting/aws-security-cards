@@ -12,7 +12,7 @@ AWS CloudHSM provides single-tenant, FIPS-validated hardware security modules in
 | --- | --- | --- | --- |
 | **HIGH** | **Regional** | **FIPS 140-3 L3** | **Dedicated** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### HSM Clusters & Instances
 CloudHSM clusters contain one or more HSM instances distributed across Availability Zones within a VPC. Each HSM gets an Elastic Network Interface (ENI) in your subnet. Clients connect to HSMs through these ENIs over ports 2223-2225. AWS automatically creates a security group (`cloudhsm-cluster-<clusterID>-sg`) controlling network access.
@@ -134,7 +134,7 @@ aws cloudhsmv2 create-hsm --cluster-id cluster-newcluster --availability-zone eu
 ```
 > Note: The attacker still needs HSM user credentials to log in and use keys. Backups are encrypted and can only be restored to AWS-owned HSMs.
 
-## 🔒 Policy Examples
+## 📜 Policy Examples
 
 ### ❌ Bad Policy
 ```json

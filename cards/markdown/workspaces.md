@@ -1,8 +1,8 @@
-# Amazon WorkSpaces Security Card
+# <img src="../icons/workspaces.svg" width="32" alt="Amazon WorkSpaces Security"> Amazon WorkSpaces Security
 
-**Category:** COMPUTE (End-User Computing)
+![Amazon WorkSpaces Security](../images/workspaces-card.webp)
 
----
+> **Category**: END-USER COMPUTING
 
 ## Quick Stats
 
@@ -17,7 +17,7 @@
 
 ---
 
-## Service Overview
+## 📋 Service Overview
 
 Amazon WorkSpaces is a managed Desktop-as-a-Service (DaaS) that provisions cloud-based Windows or Linux virtual desktops. Each WorkSpace is associated with a directory (AWS Managed Microsoft AD, AD Connector, or Simple AD) and runs inside a customer VPC on dedicated compute.
 
@@ -37,7 +37,7 @@ WorkSpaces provide full desktop environments inside the VPC with Active Director
 
 ---
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Initial Access & Credential Abuse
 
@@ -57,7 +57,7 @@ WorkSpaces provide full desktop environments inside the VPC with Active Director
 
 ---
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Access Control Gaps
 
@@ -77,7 +77,7 @@ WorkSpaces provide full desktop environments inside the VPC with Active Director
 
 ---
 
-## Enumeration
+## 🔍 Enumeration
 
 ### List all WorkSpaces
 
@@ -129,7 +129,7 @@ aws workspaces describe-connection-aliases
 
 ---
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 - **workspaces:CreateWorkspaces with AD admin credentials** -- An attacker with this IAM permission can create new WorkSpaces joined to the directory, gaining a domain-joined desktop in the target VPC
 - **workspaces:ModifyWorkspaceProperties** -- Change running mode, compute type, or protocol; can be used to upgrade a WorkSpace to a larger instance for resource-intensive attacks
@@ -141,7 +141,7 @@ aws workspaces describe-connection-aliases
 
 ---
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### BAD -- Overly permissive WorkSpaces admin
 
@@ -214,7 +214,7 @@ aws workspaces describe-connection-aliases
 
 ---
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 1. Enforce IP Access Control Groups
 

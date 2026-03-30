@@ -12,7 +12,7 @@ Amazon Detective automatically collects log data from AWS resources and uses mac
 | --- | --- | --- | --- |
 | **ML + Graph** | **5** | **Up to 1 year** | **Per GB ingested** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Behavior Graph
 
@@ -54,7 +54,7 @@ Detective is an investigation tool, not a detection tool. Disabling it does not 
 - Update organization configuration to stop auto-enabling for new accounts
 - Tag resources with misleading metadata to cause confusion
 
-## 👻 Evasion Techniques
+## ⚠️ Evasion Techniques
 
 ### Reduce Forensic Visibility
 
@@ -127,7 +127,7 @@ aws detective describe-organization-configuration \
   --graph-arn arn:aws:detective:us-east-1:111122223333:graph:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
 ```
 
-## 🚨 Privilege Escalation
+## 📈 Privilege Escalation
 
 Detective itself does not directly enable privilege escalation in the traditional sense. However:
 
@@ -135,7 +135,7 @@ Detective itself does not directly enable privilege escalation in the traditiona
 - **Cross-account visibility**: An attacker who gains access to the administrator account's Detective console can see activity across all member accounts, mapping the entire organization's security posture.
 - **Investigation manipulation**: A principal with `detective:UpdateInvestigationState` can close active investigations, allowing ongoing attacks to proceed without analyst awareness.
 
-## ⚡ Exploitation Commands
+## 💻 Exploitation Commands
 
 **Delete Behavior Graph (Destroys All Forensic Data)**
 ```bash
@@ -171,7 +171,7 @@ aws detective update-investigation-state \
   --state ARCHIVED
 ```
 
-## 🔍 Key CloudTrail Events to Monitor
+## 📝 CloudTrail Events
 
 ### High-Severity Events
 
@@ -187,7 +187,7 @@ aws detective update-investigation-state \
 - `UpdateOrganizationConfiguration` — org auto-enable settings changed
 - `RejectInvitation` — account declined behavior graph invitation
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### ❌ Dangerous - Full Detective Access
 
@@ -268,7 +268,7 @@ aws detective update-investigation-state \
 
 *These permissions allow destroying the behavior graph and all correlated investigation data*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 🏢 Use Organization Delegated Administrator
 

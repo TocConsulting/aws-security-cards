@@ -1,8 +1,11 @@
-# AWS X-Ray Security Card
+# <img src="../icons/xray.svg" width="32" alt="AWS X-Ray Security"> AWS X-Ray Security
+
+![AWS X-Ray Security](../images/xray-card.webp)
 
 > **Category**: MONITORING
 
 AWS X-Ray is a distributed tracing service that collects data about requests served by your application. Trace data can contain sensitive application details, PII in annotations/metadata, internal architecture topology, and downstream service dependencies. X-Ray has been weaponized as a covert C2 channel (XRayC2) by encoding commands into trace annotations.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ AWS X-Ray is a distributed tracing service that collects data about requests ser
 | --- | --- | --- | --- |
 | **HIGH** | **Always on (default: built-in, optional: KMS)** | **Management (default) + Data (opt-in)** | **PROVEN** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Trace Data and Segments
 
@@ -30,7 +33,7 @@ X-Ray natively integrates with Lambda, API Gateway, ECS, EKS, EC2, SNS, SQS, Eve
 
 X-Ray trace data exposes application internals, service topology, and potentially PII. The service has been demonstrated as a viable C2 channel. Misconfigured encryption and overly broad IAM permissions amplify risk. However, X-Ray itself does not directly control infrastructure, limiting blast radius compared to services like IAM or EC2.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Data Exfiltration via Traces
 
@@ -48,7 +51,7 @@ X-Ray trace data exposes application internals, service topology, and potentiall
 - Poll for commands using GetTraceSummaries with filter expressions on annotations
 - Enumerate sampling rules to understand what traffic is being traced (GetSamplingRules)
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Encryption and Access
 
@@ -66,7 +69,7 @@ X-Ray trace data exposes application internals, service topology, and potentiall
 - Not using X-Ray groups with filter expressions to isolate sensitive trace data
 - Granting AWSXrayCrossAccountSharingConfiguration without restricting which accounts can link
 
-## Enumeration
+## 🔍 Enumeration
 
 **List Encryption Configuration**
 ```bash
@@ -122,7 +125,7 @@ aws xray get-insight-summaries \
   --group-arn "arn:aws:xray:us-east-1:123456789012:group/my-group/UniqueID"
 ```
 
-## Data Exfiltration
+## 📤 Data Exfiltration
 
 ### Injecting Data into Traces
 
@@ -161,7 +164,7 @@ aws xray batch-get-traces --trace-ids "1-67890abc-def012345678abcdef012345"
 
 > **Warning:** PutTraceSegments is a data event in CloudTrail. Unless CloudTrail data events are explicitly enabled for X-Ray, these calls are invisible to audit logs.
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Overly Permissive -- Full X-Ray Access
 
@@ -253,7 +256,7 @@ aws xray batch-get-traces --trace-ids "1-67890abc-def012345678abcdef012345"
 
 *Prevents non-admin roles from changing X-Ray encryption configuration. X-Ray does not provide service-specific condition keys, so the policy denies PutEncryptionConfig for all non-admin principals. Note: setting encryption type to NONE reverts to default built-in encryption -- X-Ray always encrypts data at rest.*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Enable Customer-Managed KMS Encryption
 

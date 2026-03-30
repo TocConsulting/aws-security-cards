@@ -1,18 +1,10 @@
-# Amazon DocumentDB (with MongoDB Compatibility) — AWS Security Card
+# <img src="../icons/documentdb.svg" width="32" alt="Amazon DocumentDB Security"> Amazon DocumentDB Security
 
-| **Category** | DATABASE |
-|---|---|
-| **Service** | Amazon DocumentDB |
-| **Risk Score** | 8.0 / 10 |
-| **Publicly Accessible** | No — VPC-only (PubliclyAccessible is always false) |
-| **Encryption at Rest** | AES-256 via AWS KMS (enabled at cluster creation, cannot be changed afterward) |
-| **Encryption in Transit** | TLS enabled by default on new clusters (parameter: `tls`) |
-| **Audit Logging** | Disabled by default — requires `audit_logs` parameter and CloudWatch Logs export |
-| **Authentication** | MongoDB SCRAM-based auth with username/password; IAM controls management plane |
+![Amazon DocumentDB Security](../images/documentdb-card.webp)
 
----
+> **Category**: DATABASE
 
-## Service Overview
+## 📋 Service Overview
 
 Amazon DocumentDB is a managed document database service compatible with the MongoDB wire protocol. It supports MongoDB 4.0, 5.0, and 8.0 compatibility modes. Clusters run exclusively inside a VPC with no public endpoint option.
 
@@ -26,7 +18,7 @@ Amazon DocumentDB is a managed document database service compatible with the Mon
 
 ---
 
-## Risk Assessment
+## Security Risk Assessment
 
 | Factor | Rating | Detail |
 |---|---|---|
@@ -38,7 +30,7 @@ Amazon DocumentDB is a managed document database service compatible with the Mon
 
 ---
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Initial Access
 
@@ -62,7 +54,7 @@ Amazon DocumentDB is a managed document database service compatible with the Mon
 
 ---
 
-## Common Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Critical
 
@@ -86,7 +78,7 @@ Amazon DocumentDB is a managed document database service compatible with the Mon
 
 ---
 
-## Enumeration Commands
+## 🔍 Enumeration Commands
 
 All commands use the `aws docdb` CLI namespace. Verified against AWS CLI v2.
 
@@ -165,7 +157,7 @@ aws docdb describe-pending-maintenance-actions
 
 ---
 
-## Data Exfiltration Paths
+## 📤 Data Exfiltration Paths
 
 | # | Path | Method |
 |---|---|---|
@@ -177,7 +169,7 @@ aws docdb describe-pending-maintenance-actions
 
 ---
 
-## IAM Policy Examples
+## 📜 Policy Examples
 
 ### Bad Policy — Overly Permissive
 
@@ -253,7 +245,7 @@ aws docdb describe-pending-maintenance-actions
 
 ---
 
-## Detection — CloudTrail Events to Monitor
+## 🛡️ Detection — CloudTrail Events to Monitor
 
 | Event | Significance |
 |---|---|
@@ -268,7 +260,7 @@ aws docdb describe-pending-maintenance-actions
 
 ---
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 1. Enforce TLS with Minimum Version
 

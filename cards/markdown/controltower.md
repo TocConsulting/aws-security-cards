@@ -1,8 +1,11 @@
-# AWS Control Tower Security
+# <img src="../icons/controltower.svg" width="32" alt="AWS Control Tower Security"> AWS Control Tower Security
+
+![AWS Control Tower Security](../images/controltower-card.webp)
 
 > **Category**: MANAGEMENT
 
 AWS Control Tower orchestrates multi-account governance by deploying a landing zone with guardrails (preventive, detective, proactive), Account Factory, and centralized logging. Compromising the management account or disabling controls grants unrestricted access across the entire organization.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ AWS Control Tower orchestrates multi-account governance by deploying a landing z
 | --- | --- | --- | --- |
 | **CRITICAL** | **Preventive / Detective / Proactive** | **Landing Zone** | **Management Account** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Landing Zone
 
@@ -53,7 +56,7 @@ Standardized account provisioning via AWS Service Catalog. Creates new accounts 
 
 AWS Control Tower is the governance layer for the entire organization. Compromise of the management account means full admin access to every enrolled member account via the `AWSControlTowerExecution` role. Disabling controls removes guardrails organization-wide. Drift introduced by an attacker can disable security detection without triggering obvious alerts.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Management Account Compromise
 
@@ -71,7 +74,7 @@ AWS Control Tower is the governance layer for the entire organization. Compromis
 - Delete or modify the `AWSControlTowerCloudTrailRole` to disrupt centralized logging (triggers role drift but buys time)
 - Abuse delegated administrator privileges to escalate access across the organization
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Dangerous Defaults
 
@@ -89,7 +92,7 @@ AWS Control Tower is the governance layer for the entire organization. Compromis
 - No SCP protecting Control Tower roles from modification in member accounts
 - Management account used for daily workloads instead of being isolated to Control Tower administration only
 
-## Enumeration
+## 🔍 Enumeration
 
 **List Landing Zones**
 ```bash
@@ -145,7 +148,7 @@ aws organizations list-policies-for-target \
   --filter SERVICE_CONTROL_POLICY
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### From Member Account to Full Organization Access
 
@@ -177,7 +180,7 @@ aws controltower disable-control \
   --target-identifier arn:aws:organizations::123456789012:ou/o-abc1234xyz/ou-abc-xyz
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Bad: AWSControlTowerExecution Default Trust (No Conditions)
 
@@ -289,7 +292,7 @@ aws controltower disable-control \
 
 *Prevents member account identities from modifying or deleting Control Tower roles. Only the AWSControlTowerExecution role itself (used by Control Tower operations) can modify these roles.*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Isolate the Management Account
 

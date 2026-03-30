@@ -1,8 +1,11 @@
-# AWS Firewall Manager Security
+# <img src="../icons/firewallmanager.svg" width="32" alt="AWS Firewall Manager Security"> AWS Firewall Manager Security
+
+![AWS Firewall Manager Security](../images/firewallmanager-card.webp)
 
 > **Category**: MANAGEMENT
 
 AWS Firewall Manager is a centralized security management service that lets you configure and deploy firewall rules and protections across multiple accounts and resources in an AWS Organization. It manages WAF, Shield Advanced, VPC Security Groups, Network ACLs, Network Firewall, Route 53 Resolver DNS Firewall, and third-party firewalls (Palo Alto Networks Cloud NGFW, Fortigate CNF).
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ AWS Firewall Manager is a centralized security management service that lets you 
 | --- | --- | --- | --- |
 | **HIGH** | **Org-wide** | **WAF/SG/NF/DNS/Shield/NACL** | **Organizations + Config** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Centralized Policy Management
 
@@ -30,7 +33,7 @@ Policies can automatically remediate non-compliant resources. Scope is controlle
 
 Firewall Manager is an organization-wide security control plane. Compromise of the FMS administrator account or misconfiguration of policies can silently remove WAF rules, security group restrictions, and Network Firewall protections across every account in the organization. The blast radius is the entire AWS Organization.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Policy Manipulation
 
@@ -48,7 +51,7 @@ Firewall Manager is an organization-wide security control plane. Compromise of t
 - Delete notification channel with fms:DeleteNotificationChannel to suppress compliance alerts
 - Disassociate the legitimate admin account with fms:DisassociateAdminAccount
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Policy Scope Issues
 
@@ -66,7 +69,7 @@ Firewall Manager is an organization-wide security control plane. Compromise of t
 - WAF policies using COUNT action instead of BLOCK in managed rule groups
 - Third-party firewall integration enabled without verifying the third-party tenant configuration
 
-## Enumeration
+## 🔍 Enumeration
 
 **Identify FMS Administrator Account**
 ```bash
@@ -126,7 +129,7 @@ aws fms list-resource-sets
 aws fms list-admin-accounts-for-organization
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### fms:PutPolicy -- Weaken Organization-Wide Security
 
@@ -140,7 +143,7 @@ The `fms:AssociateAdminAccount` action (callable from the Organizations manageme
 
 An attacker with `fms:DeletePolicy` can delete Firewall Manager policies, which removes the centrally managed WAF rules, security group rules, or Network Firewall configurations from all accounts in scope. Combined with `fms:DeleteNotificationChannel`, the deletion can go unnoticed.
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Bad -- Overly Broad Exclusion, No Remediation
 
@@ -197,7 +200,7 @@ An attacker with `fms:DeletePolicy` can delete Firewall Manager policies, which 
 
 *Default action is BLOCK, AWS Managed Rules Common Rule Set is enforced, remediation is enabled, no accounts or tags are excluded, multiple resource types are covered, and orphaned resources are cleaned up on policy deletion.*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Restrict FMS Administrative Permissions
 

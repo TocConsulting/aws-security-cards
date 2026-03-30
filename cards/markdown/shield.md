@@ -1,8 +1,8 @@
-# AWS Shield / Shield Advanced
+# <img src="../icons/shield.svg" width="32" alt="AWS Shield Security"> AWS Shield Security
 
-## Category: Networking & DDoS Protection
+![AWS Shield Security](../images/shield-card.webp)
 
----
+> **Category**: DDoS PROTECTION
 
 ## Quick Stats
 
@@ -15,7 +15,7 @@
 
 ---
 
-## Service Overview
+## 📋 Service Overview
 
 ### How Shield Works
 
@@ -41,7 +41,7 @@ Shield Standard is automatic and free, reducing baseline risk. However, organiza
 
 ---
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### External DDoS Attack Types
 - **UDP reflection/amplification** -- Attacker spoofs source IP to trigger DNS, NTP, SSDP, or memcached servers to flood the target with response traffic
@@ -59,7 +59,7 @@ Shield Standard is automatic and free, reducing baseline risk. However, organiza
 
 ---
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Protection Coverage Gaps
 - **Internet-facing resources not added to Shield Advanced** -- Shield Advanced requires explicit per-resource enrollment; unprotected ALBs, CloudFront distributions, or Elastic IPs receive only Standard-tier coverage
@@ -77,7 +77,7 @@ Shield Standard is automatic and free, reducing baseline risk. However, organiza
 
 ---
 
-## Enumeration
+## 🔍 Enumeration
 
 ### Check Subscription Status
 ```
@@ -134,7 +134,7 @@ aws shield describe-emergency-contact-settings
 
 ---
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### Direct Escalation Paths
 - **shield:CreateSubscription + shield:CreateProtection** -- An attacker who gains these permissions can subscribe the account to Shield Advanced ($3,000/month) and add protections, causing unexpected charges
@@ -149,7 +149,7 @@ aws shield describe-emergency-contact-settings
 
 ---
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Dangerous -- Overly Permissive Shield Access
 ```json
@@ -239,7 +239,7 @@ aws shield describe-emergency-contact-settings
 
 ---
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 1. Enable Shield Advanced on All Internet-Facing Resources
 Add explicit Shield Advanced protections to every CloudFront distribution, Application Load Balancer, Elastic IP, Global Accelerator, and Route 53 hosted zone that serves production traffic.
@@ -307,7 +307,7 @@ Key metrics to alarm on: `DDoSDetected`, `DDoSAttackBitsPerSecond`, `DDoSAttackP
 
 ---
 
-## Footer
+
 
 AWS Shield / Shield Advanced Security Card -- Toc Consulting
 

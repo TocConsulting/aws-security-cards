@@ -1,8 +1,11 @@
-# AWS Elastic Beanstalk Security
+# <img src="../icons/elasticbeanstalk.svg" width="32" alt="AWS Elastic Beanstalk Security"> AWS Elastic Beanstalk Security
+
+![AWS Elastic Beanstalk Security](../images/elasticbeanstalk-card.webp)
 
 > **Category**: COMPUTE
 
 AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, CloudWatch, and IAM to deploy applications. It creates a predictable S3 bucket (`elasticbeanstalk-<region>-<account-id>`) containing application source bundles, exposes environment variables in plaintext through its API, and runs EC2 instances with IMDS -- making it a compound attack surface.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, Cl
 | --- | --- | --- | --- |
 | **HIGH** | **Regional** | **EC2 Instances** | **Service + Instance Profile** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Application Deployment and S3 Storage
 
@@ -36,7 +39,7 @@ Elastic Beanstalk uses two IAM roles: a **service role** (`aws-elasticbeanstalk-
 
 Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket naming exposes source code, plaintext environment variables leak secrets through the API, EC2 instances with IMDS provide credential theft opportunities, and `.ebextensions`/`.platform` hooks allow code execution as root during deployments.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Source Code and Secrets Theft
 
@@ -54,7 +57,7 @@ Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket nam
 - Abuse `container_commands` in `.ebextensions` for pre-deployment RCE
 - Modify environment to attach an over-privileged instance profile
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Secrets and Access Exposure
 
@@ -72,7 +75,7 @@ Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket nam
 - Managed platform updates disabled (unpatched OS and runtime)
 - VPC flow logs not enabled on Elastic Beanstalk VPC/subnets
 
-## Enumeration
+## 🔍 Enumeration
 
 **List All Applications**
 ```bash
@@ -143,7 +146,7 @@ aws elasticbeanstalk list-tags-for-resource \
   --resource-arn arn:aws:elasticbeanstalk:REGION:ACCOUNT_ID:environment/APP_NAME/ENV_NAME
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### Via Source Bundle Injection
 
@@ -161,7 +164,7 @@ An attacker with `elasticbeanstalk:UpdateEnvironment` can modify environment pro
 
 An attacker with `elasticbeanstalk:UpdateEnvironment` and `iam:PassRole` can change the instance profile to a more privileged role, then access those elevated credentials from the EC2 instance via IMDS.
 
-## Credential Theft
+## 🔑 Credential Theft
 
 ### From IMDS (on compromised instance)
 
@@ -193,7 +196,7 @@ grep -ri "password\|secret\|key\|token" /tmp/source/
 
 > **Key insight:** Elastic Beanstalk exposes secrets through three distinct channels: IMDS on instances, environment variables via the API, and source bundles in S3. All three must be secured independently.
 
-## Detection
+## 🛡️ Detection
 
 ### CloudTrail Events
 
@@ -214,7 +217,7 @@ grep -ri "password\|secret\|key\|token" /tmp/source/
 - CreateApplicationVersion with source bundle from unexpected S3 location
 - S3 GetObject requests on `elasticbeanstalk-*` buckets from unknown IPs
 
-## Exploitation Commands
+## 💻 Exploitation Commands
 
 **Extract All Environment Variables**
 ```bash
@@ -265,7 +268,7 @@ aws elasticbeanstalk retrieve-environment-info \
   --environment-name ENV_NAME --info-type bundle
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Dangerous -- Full Elastic Beanstalk Access
 
@@ -353,7 +356,7 @@ aws elasticbeanstalk retrieve-environment-info \
 
 *Scoped to a specific application and environment -- limits blast radius*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Use Secrets Manager Instead of Environment Properties
 

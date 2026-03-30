@@ -1,8 +1,11 @@
-# Amazon Verified Permissions Security Card
+# <img src="../icons/verifiedpermissions.svg" width="32" alt="Amazon Verified Permissions Security"> Amazon Verified Permissions Security
+
+![Amazon Verified Permissions Security](../images/verifiedpermissions-card.webp)
 
 > **Category**: IDENTITY
 
 Amazon Verified Permissions is a fully managed, fine-grained authorization service for custom applications. It uses the Cedar policy language to define permissions and make authorization decisions. Applications call the IsAuthorized or IsAuthorizedWithToken API to evaluate Cedar policies stored in a policy store and receive Allow or Deny decisions.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ Amazon Verified Permissions is a fully managed, fine-grained authorization servi
 | --- | --- | --- | --- |
 | **MEDIUM** | **10+** | **Cedar** | **RBAC + ABAC** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Policy Stores
 
@@ -36,7 +39,7 @@ Identity sources connect external identity providers (Amazon Cognito user pools 
 
 Verified Permissions is an application-layer authorization service. It does not directly control AWS resource access (that is IAM's role). However, misconfigurations in Cedar policies, schemas, or identity source mappings can lead to authorization bypass in the applications that rely on it. The primary risks are overly permissive Cedar policies, disabled schema validation, and flawed policy logic that grants unintended access.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Cedar Policy Logic Attacks
 
@@ -54,7 +57,7 @@ Verified Permissions is an application-layer authorization service. It does not 
 - Abuse overly permissive IAM policies on `verifiedpermissions:CreatePolicy` to inject attacker-controlled Cedar policies into a policy store
 - Target the application layer to bypass Verified Permissions entirely if the app fails to call IsAuthorized for every access decision
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Cedar Policy Misconfigurations
 
@@ -72,7 +75,7 @@ Verified Permissions is an application-layer authorization service. It does not 
 - CloudTrail data events not enabled for IsAuthorized and IsAuthorizedWithToken, leaving authorization decisions unaudited
 - No monitoring or alerting on policy store modifications (CreatePolicy, UpdatePolicy, DeletePolicy, PutSchema)
 
-## Enumeration
+## 🔍 Enumeration
 
 **List All Policy Stores**
 ```bash
@@ -132,7 +135,7 @@ aws verifiedpermissions is-authorized \
   --resource entityType=Photo,entityId=VacationPhoto94.jpg
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### Cedar Policy Injection
 
@@ -148,7 +151,7 @@ aws verifiedpermissions is-authorized \
 
 > **Key Technique:** Enumerate the full policy set with `list-policies` and `get-policy`, then analyze Cedar policy logic offline to find gaps -- actions or resources with no corresponding `forbid` policy and overly broad `permit` policies.
 
-## Lateral Movement
+## 🔗 Lateral Movement
 
 ### From Verified Permissions
 
@@ -163,7 +166,7 @@ aws verifiedpermissions is-authorized \
 - Dump all policies to reverse-engineer the full authorization model and find authorization gaps
 - Retrieve identity source configuration to discover connected Cognito user pool ARNs and OIDC provider URLs
 
-## Detection
+## 🛡️ Detection
 
 ### CloudTrail Management Events (Logged by Default)
 
@@ -193,7 +196,7 @@ aws verifiedpermissions is-authorized \
 - DeletePolicy events removing forbid policies (weakening security controls)
 - New identity sources added pointing to external OIDC providers
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Bad: Unrestricted Cedar Permit Policy
 
@@ -274,7 +277,7 @@ permit(
 
 *Uses a UUID for the principal identifier, preventing identifier reuse attacks. Also scopes action and resource.*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Enable STRICT Schema Validation
 

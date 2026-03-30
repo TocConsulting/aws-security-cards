@@ -1,8 +1,11 @@
-# Amazon Lightsail Security
+# <img src="../icons/lightsail.svg" width="32" alt="Amazon Lightsail Security"> Amazon Lightsail Security
+
+![Amazon Lightsail Security](../images/lightsail-card.webp)
 
 > **Category**: COMPUTE
 
 Amazon Lightsail provides simplified virtual private servers, managed databases, object storage, and container services with a built-in firewall. Its simplified interface masks real security risks: default SSH keys shared across all instances in a region, firewall rules open to 0.0.0.0/0 by default, and forgotten instances running unpatched software are common attack surfaces.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ Amazon Lightsail provides simplified virtual private servers, managed databases,
 | --- | --- | --- | --- |
 | **HIGH** | **Regional** | **Instance-level** | **Default + Custom Keys** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Instance Firewall
 
@@ -30,7 +33,7 @@ Lightsail creates one default SSH key pair per AWS Region. The private key is st
 
 Lightsail instances are frequently deployed by non-security-focused teams, left unmonitored, and forgotten. The combination of default SSH keys shared per region, permissive default firewall rules, no VPC-level network ACLs, IMDSv1 enabled by default on most blueprints (except Amazon Linux 2023 and Ubuntu 24, which default to IMDSv2), and limited CloudTrail visibility makes Lightsail a high-value target for lateral movement.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Credential & Key Theft
 
@@ -48,7 +51,7 @@ Lightsail instances are frequently deployed by non-security-focused teams, left 
 - Pivot from peered VPC (firewall rules do not apply to private IP traffic)
 - Access forgotten/abandoned instances running outdated software
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Firewall & Network
 
@@ -66,7 +69,7 @@ Lightsail instances are frequently deployed by non-security-focused teams, left 
 - Database publicly accessible with default master credentials
 - Exported snapshots to EC2 retain residual Lightsail SSH keys
 
-## Enumeration
+## 🔍 Enumeration
 
 **List All Instances**
 ```bash
@@ -121,7 +124,7 @@ aws lightsail is-vpc-peered
 aws lightsail get-buckets
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### From Lightsail API Access to Instance Shell
 
@@ -140,7 +143,7 @@ aws lightsail get-buckets
 
 > **Key insight:** Lightsail's `download-default-key-pair` and `get-instance-access-details` are uniquely dangerous APIs -- they directly return SSH private keys and passwords, unlike EC2 which requires the original key pair to decrypt Windows passwords.
 
-## Exploitation Commands
+## 💻 Exploitation Commands
 
 **Download Default Key and SSH into Instance**
 ```bash
@@ -183,7 +186,7 @@ aws lightsail get-instance-access-details \
   --instance-name my-windows-instance --protocol rdp
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Dangerous - Full Lightsail Access
 
@@ -261,7 +264,7 @@ aws lightsail get-instance-access-details \
 
 *Explicit deny on the most dangerous Lightsail actions -- prevents credential theft and firewall modification*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Enforce IMDSv2
 

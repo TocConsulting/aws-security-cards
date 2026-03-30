@@ -1,8 +1,11 @@
-# Amazon EMR Security
+# <img src="../icons/emr.svg" width="32" alt="Amazon EMR Security"> Amazon EMR Security
+
+![Amazon EMR Security](../images/emr-card.webp)
 
 > **Category**: ANALYTICS
 
 Amazon EMR (Elastic MapReduce) runs Apache Spark, Hadoop, Hive, Presto, and other big data frameworks on EC2 clusters. Cluster nodes expose numerous web UIs (YARN on 8088, Spark History Server on 18080, Livy on 8998, Hue on 8888, JupyterHub on 9443), run with EC2 instance profiles granting S3 access via EMRFS, and execute arbitrary code through steps and bootstrap actions. IMDS credential theft, exposed web interfaces, and over-privileged instance profiles are the primary attack surface.
+
 
 ## Quick Stats
 
@@ -10,7 +13,7 @@ Amazon EMR (Elastic MapReduce) runs Apache Spark, Hadoop, Hive, Presto, and othe
 | --- | --- | --- | --- |
 | **HIGH** | **Regional** | **Off** | **SGs + BPA** |
 
-## Service Overview
+## 📋 Service Overview
 
 ### Cluster Nodes and IMDS
 
@@ -30,7 +33,7 @@ EMR clusters host over a dozen web interfaces on the primary node: YARN Resource
 
 EMR clusters run arbitrary code by design, combine multiple EC2 instances with shared credentials, expose numerous unauthenticated web interfaces, and often have instance profiles with broad S3 access. Without encryption enabled via security configurations, data at rest and in transit is unprotected by default.
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Credential Theft and SSRF
 
@@ -48,7 +51,7 @@ EMR clusters run arbitrary code by design, combine multiple EC2 instances with s
 - Malicious S3 objects replacing legitimate bootstrap scripts or step JARs
 - Custom JAR steps run with full instance profile permissions on the cluster
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Network and Access
 
@@ -66,7 +69,7 @@ EMR clusters run arbitrary code by design, combine multiple EC2 instances with s
 - In-transit encryption (TLS) not enabled for Spark shuffle, HDFS transfers, and Presto internal communication
 - Instance profile with overly broad S3 permissions (e.g., `s3:*` on `*`) instead of scoped EMRFS IAM roles
 
-## Enumeration
+## 🔍 Enumeration
 
 **List All Clusters**
 ```bash
@@ -117,7 +120,7 @@ aws emr get-cluster-session-credentials \
   --execution-role-arn arn:aws:iam::123456789012:role/MyExecRole
 ```
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 ### From Cluster Code Execution to AWS Account
 
@@ -129,7 +132,7 @@ aws emr get-cluster-session-credentials \
 
 > **Key insight:** EMR clusters execute arbitrary code by design. The real privilege escalation risk is the gap between "can submit code to the cluster" and "the permissions the cluster's instance profile grants in AWS."
 
-## Exploitation Commands
+## 💻 Exploitation Commands
 
 **Steal Instance Profile Credentials from a Cluster Node**
 ```bash
@@ -161,7 +164,7 @@ aws emr create-cluster --name "escalation" \
   --steps Type=CUSTOM_JAR,Name="cmd",Jar="command-runner.jar",Args=["aws","s3","ls"]
 ```
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Dangerous - Overly Broad Step Submission
 
@@ -241,7 +244,7 @@ aws emr create-cluster --name "escalation" \
 
 *Instance profile limited to read-only access on specific S3 prefixes*
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### Enforce IMDSv2 on All Cluster Nodes
 

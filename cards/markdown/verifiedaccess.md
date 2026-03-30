@@ -1,10 +1,8 @@
-# AWS Verified Access — Security Card
+# <img src="../icons/verifiedaccess.svg" width="32" alt="AWS Verified Access Security"> AWS Verified Access Security
 
-**Category:** NETWORKING
-**Service:** AWS Verified Access
-**AWS CLI Namespace:** `ec2` (Verified Access is managed through EC2 API actions)
+![AWS Verified Access Security](../images/verifiedaccess-card.webp)
 
----
+> **Category**: NETWORKING
 
 ## Quick Stats
 
@@ -17,7 +15,7 @@
 
 ---
 
-## Service Overview
+## 📋 Service Overview
 
 AWS Verified Access provides secure access to corporate applications without requiring a VPN. It evaluates each access request in real time against access policies you define, using identity and device posture data from configured trust providers. Access is granted per-application only when security requirements (user identity, group membership, device compliance) are met.
 
@@ -44,7 +42,7 @@ Verified Access is a protective control, not a data store. The primary risk is m
 
 ---
 
-## Attack Vectors
+## ⚔️ Attack Vectors
 
 ### Trust Provider Abuse
 
@@ -64,7 +62,7 @@ Verified Access is a protective control, not a data store. The primary risk is m
 
 ---
 
-## Misconfigurations
+## ⚠️ Misconfigurations
 
 ### Policy Weaknesses
 
@@ -84,7 +82,7 @@ Verified Access is a protective control, not a data store. The primary risk is m
 
 ---
 
-## Enumeration
+## 🔍 Enumeration
 
 ### List Verified Access Instances
 
@@ -147,7 +145,7 @@ Source: [AWS CLI Reference — describe-verified-access-instance-logging-configu
 
 ---
 
-## Privilege Escalation
+## 📈 Privilege Escalation
 
 Verified Access itself is not a path to IAM privilege escalation in the traditional sense. However, an attacker with `ec2:ModifyVerifiedAccessGroupPolicy` or `ec2:ModifyVerifiedAccessEndpointPolicy` permissions can weaken or remove access controls on protected applications, effectively granting themselves (or any user) access to internal resources.
 
@@ -162,7 +160,7 @@ Verified Access itself is not a path to IAM privilege escalation in the traditio
 
 ---
 
-## Policy Examples
+## 📜 Policy Examples
 
 ### Bad: Blanket Permit with No Conditions
 
@@ -233,7 +231,7 @@ when {
 
 ---
 
-## Defense Recommendations
+## 🛡️ Defense Recommendations
 
 ### 1. Enable Access Logging on Every Instance
 
