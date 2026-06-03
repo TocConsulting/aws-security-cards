@@ -300,7 +300,7 @@ Use VPC Reachability Analyzer to find paths.
 
 ```bash
 aws ec2 create-network-insights-path \\
-  --source eni-xxx --destination eni-yyy
+  --source eni-xxx --destination eni-yyy --protocol tcp
 ```
 
 ---

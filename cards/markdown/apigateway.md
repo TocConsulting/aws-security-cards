@@ -142,7 +142,6 @@ aws apigateway get-api-keys --include-values
 
 - UpdateRestApi / UpdateApi
 - UpdateAuthorizer
-- PutRestApiPolicy
 - CreateDeployment
 - GetApiKeys (credential enumeration)
 

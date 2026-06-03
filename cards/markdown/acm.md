@@ -297,7 +297,7 @@ Log all ACM and ACM-PCA API calls for audit trail.
 ```bash
 aws cloudtrail put-event-selectors \\
   --trail-name main-trail \\
-  --event-selectors '[{"DataResources":[{"Type":"AWS::ACM::Certificate"}]}]'
+  --event-selectors '[{"ReadWriteType":"All","IncludeManagementEvents":true}]'
 ```
 
 ### 🔐 Secure Private CA

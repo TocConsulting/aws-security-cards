@@ -50,7 +50,7 @@ Detective is an investigation tool, not a detection tool. Disabling it does not 
 
 - Update investigation state to mark active investigations as closed
 - Delete members to stop data flow from specific accounts being investigated
-- Note: data source packages cannot be disabled via API once enabled; however, removing member accounts stops their data ingestion
+- Note: optional data source packages CAN be disabled via the UpdateDatasourcePackages API (the package list you pass is the full desired state, so omitting a previously enabled package stops it); removing member accounts also stops their data ingestion
 - Update organization configuration to stop auto-enabling for new accounts
 - Tag resources with misleading metadata to cause confusion
 
@@ -161,7 +161,7 @@ aws detective disassociate-membership \
 aws detective disable-organization-admin-account
 ```
 
-**Note:** Data source packages cannot be disabled via API once enabled. The `UpdateDatasourcePackages` API can only enable (start) packages, not disable them.
+**Note:** Optional data source packages CAN be disabled via the `UpdateDatasourcePackages` API — the package list you pass is the full desired state, so omitting a previously enabled package (e.g. EKS_AUDIT or ASFF_SECURITYHUB_FINDING) stops ingesting it. Stopping and later restarting a package leaves a non-retroactive data gap.
 
 **Close an Active Investigation**
 ```bash

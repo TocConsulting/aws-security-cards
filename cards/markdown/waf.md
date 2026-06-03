@@ -22,7 +22,7 @@ Web ACLs contain ordered rules that inspect requests. Rules can ALLOW, BLOCK, CO
 
 ### Rate-Based Rules
 
-Automatically block IPs exceeding request thresholds. Can be based on IP, headers, or custom keys. Minimum 100 requests in 5 minutes to trigger.
+Automatically block IPs exceeding request thresholds. Can be based on IP, headers, or custom keys. Minimum 10 requests in the evaluation window (default 5 minutes) to trigger.
 
 > Attack note: Distribute attacks across IPs or rotate headers to stay under rate limits
 

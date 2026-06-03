@@ -174,7 +174,7 @@ aws ecs run-task \\
 
 **Get Task Metadata (from container)**
 ```bash
-curl http://169.254.170.2/v4/metadata
+curl ${ECS_CONTAINER_METADATA_URI_V4}/task
 ```
 
 **Steal Task Credentials (from container)**

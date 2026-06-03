@@ -292,7 +292,7 @@ done
     "Resource": "*",
     "Condition": {
       "StringNotEquals": {
-        "aws:PrincipalOrgMasterAccountId": "${'${'}aws:PrincipalAccount}"
+        "aws:PrincipalOrgMasterAccountId": "${aws:PrincipalAccount}"
       }
     }
   }]

@@ -221,23 +221,7 @@ aws docdb describe-pending-maintenance-actions
       "Sid": "DenyDocDBSnapshotPublicSharing",
       "Effect": "Deny",
       "Action": "rds:ModifyDBClusterSnapshotAttribute",
-      "Resource": "arn:aws:rds:*:*:cluster-snapshot:*",
-      "Condition": {
-        "StringEquals": {
-          "rds:AddRestoreAccountId": "all"
-        }
-      }
-    },
-    {
-      "Sid": "DenyDisableDeletionProtection",
-      "Effect": "Deny",
-      "Action": "rds:ModifyDBCluster",
-      "Resource": "arn:aws:rds:*:*:cluster:*",
-      "Condition": {
-        "Bool": {
-          "rds:DeletionProtection": "false"
-        }
-      }
+      "Resource": "arn:aws:rds:*:*:cluster-snapshot:*"
     }
   ]
 }
@@ -317,12 +301,7 @@ Apply this Service Control Policy at the AWS Organizations level:
       "Sid": "DenyPublicDocDBSnapshots",
       "Effect": "Deny",
       "Action": "rds:ModifyDBClusterSnapshotAttribute",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "rds:AddRestoreAccountId": "all"
-        }
-      }
+      "Resource": "*"
     }
   ]
 }

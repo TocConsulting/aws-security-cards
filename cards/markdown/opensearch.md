@@ -144,7 +144,6 @@ curl -X GET 'https://domain.region.es.amazonaws.com/_cat/indices?v'
 
 - DescribeDomain - enumeration
 - UpdateDomainConfig - config change
-- ESHttpGet/ESHttpPost - API calls
 - CreateElasticsearchDomain - new domain
 - DeleteElasticsearchDomain - deletion
 

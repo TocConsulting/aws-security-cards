@@ -24,7 +24,7 @@ Centralizes permissions for Glue databases, tables, and S3 data locations. Repla
 
 Attribute-based access control using key-value tags on databases, tables, columns. Grants based on tag expressions. Simplifies permission management at scale.
 
-> Attack note: LF-Tags can be modified if you have AlterLFTagValues permission. Tag manipulation = permission manipulation.
+> Attack note: LF-Tags can be modified if you have UpdateLFTag permission. Tag manipulation = permission manipulation.
 
 ## Security Risk Assessment
 

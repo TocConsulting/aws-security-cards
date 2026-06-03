@@ -162,7 +162,7 @@ aws events put-permission --event-bus-name default --action events:PutEvents --p
 
 **Replay Archived Events**
 ```bash
-aws events start-replay --replay-name attack-replay --event-source-arn arn:aws:events:us-east-1:123:archive/my-archive --destination arn:aws:events:us-east-1:123:event-bus/default --event-start-time 2024-01-01T00:00:00Z --event-end-time 2024-01-02T00:00:00Z
+aws events start-replay --replay-name attack-replay --event-source-arn arn:aws:events:us-east-1:123:archive/my-archive --destination Arn=arn:aws:events:us-east-1:123:event-bus/default --event-start-time 2024-01-01T00:00:00Z --event-end-time 2024-01-02T00:00:00Z
 ```
 
 **List Rule Targets (Recon)**

@@ -261,9 +261,9 @@
     <div>
       <div>
         <span class="header-title">AWS Shield Security</span>
-        <span class="header-badge">NETWORKING</span>
+        <span class="header-badge">DDoS PROTECTION</span>
       </div>
-      <p class="header-desc">AWS Shield provides DDoS protection at two tiers. Shield Standard defends against Layer 3/4 DDoS attacks for free. Shield Advanced extends protection with Layer 7 mitigation, SRT access, cost protection, and proactive engagement. An attacker with account access can disable protections to amplify external DDoS impact.</p>
+      <p class="header-desc"></p>
     </div>
   </div>
 </div>
@@ -275,32 +275,32 @@
           <div class="stat-label">Risk Level</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">Global+Regional</div>
+          <div class="stat-value" style="color: #4ade80;">Global (CloudFront, Route 53) + Regional (ELB, EC2, Global Accelerator)</div>
           <div class="stat-label">Scope</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">L3/L4/L7</div>
-          <div class="stat-label">Protection</div>
+          <div class="stat-value" style="color: #60a5fa;">Shield Standard, Shield Advanced, SRT (API prefix: DRT), Protection Groups</div>
+          <div class="stat-label">Key Components</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">$3K/mo</div>
-          <div class="stat-label">Advanced Cost</div>
+          <div class="stat-value" style="color: #c084fc;">Standard: Free / Advanced: $3,000/month (1-year commitment)</div>
+          <div class="stat-label">Pricing</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#3b82f6;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#3b82f6;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
-          <h4 style="color: #3b82f6;">Shield Standard vs Advanced</h4>
-          <p>Shield Standard is automatic and free for all AWS customers, covering Layer 3/4. Shield Advanced ($3,000/month) adds Layer 7 mitigation, SRT access, cost protection, health-based detection, and proactive engagement.</p>
-          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> Shield Standard only covers Layer 3/4. Without Shield Advanced, application-layer floods (HTTP floods, DNS query floods) have no automatic mitigation. Attackers target Layer 7 specifically against Standard-only customers.</div>
-        </div>
-        <div>
-          <h4 style="color: #3b82f6;">DDoS Attack Vectors Addressed</h4>
-          <p>Protects against UDP reflection, SYN floods, DNS amplification, HTTP request floods, and HTTP/2 rapid reset attacks. Shield Advanced subscribers get 24/7 SRT access and automatic application-layer mitigation via AWS WAF.</p>
-          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> An attacker with account access can disable Shield Advanced protections, remove protections from resources, or disassociate health checks to blind detection -- turning account compromise into a DDoS amplifier.</div>
+          <h4 style="color: #3b82f6;">How Shield Works</h4>
+          <p>AWS Shield provides DDoS protection at two tiers. <strong>Shield Standard</strong> is automatically enabled at no charge for all AWS customers and defends against the most common network-layer (Layer 3) and transport-layer (Layer 4) DDoS attacks targeting resources behind Amazon CloudFront, Amazon Route 53, and AWS Global Accelerator. <strong>Shield Advanced</strong> is a paid subscription that extends protection to Amazon EC2, Elastic Load Balancing, CloudFront, Global Accelerator, and Route 53 with enhanced detection, near real-time visibility, and application-layer (Layer 7) DDoS mitigation. Shield Advanced subscribers get 24/7 access to the AWS Shield Response Team (SRT), automatic application-layer DDoS mitigation via AWS WAF, cost protection (service credits for DDoS-related scaling spikes), health-based detection using Route 53 health checks, and proactive engagement where the SRT contacts you directly when a health check becomes unhealthy during a detected event.</p>
+          <div class="attack-note"><span style="color:#3b82f6;">**Attack note:</span> ** Shield Standard only covers Layer 3/4. Without Shield Advanced, application-layer floods (HTTP floods, DNS query floods) have no automatic mitigation. Attackers who understand this distinction target Layer 7 specifically against Standard-only customers.</div>
+        </div><div>
+          <h4 style="color: #3b82f6;">DDoS Attack Vectors Shield Addresses</h4>
+          <p>Shield protects against network volumetric attacks (UDP reflection, SYN floods, DNS amplification), transport protocol attacks (SYN/ACK floods, TCP connection exhaustion), and -- with Shield Advanced -- application-layer floods (HTTP request floods, HTTP/2 rapid reset attacks). AWS publicly disclosed mitigating an HTTP/2 rapid reset attack peaking at over 155 million requests per second against CloudFront in August 2023. ---</p>
+          <div class="attack-note"><span style="color:#3b82f6;">**Attack note:</span> ** An attacker does not need to compromise your AWS account to DDoS you. The threat model is external. However, an attacker *with* account access can disable Shield Advanced protections, remove protections from resources, or disassociate health checks to blind detection -- turning an account compromise into a DDoS amplifier.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,182 +315,216 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Shield Standard is automatic, reducing baseline risk. However, organizations without Shield Advanced lack Layer 7 DDoS protection, cost protection, and SRT access. Misconfigured Shield Advanced (missing health checks, no proactive engagement) creates a false sense of security.</p>
+  <p class="risk-desc">Shield Standard is automatic and free, reducing baseline risk. However, organizations running internet-facing workloads on EC2/ELB without Shield Advanced lack application-layer DDoS protection, cost protection, and SRT access. Misconfigured Shield Advanced (missing health checks, no proactive engagement, unprotected resources) creates a false sense of security. The $3,000/month cost leads many organizations to skip it, leaving them exposed to sophisticated DDoS attacks that bypass Layer 3/4 mitigations.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">External DDoS Attack Types</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> UDP reflection/amplification (DNS, NTP, memcached)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SYN flood to exhaust TCP connection state tables</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> HTTP request flood (requires Shield Advanced)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> DNS query flood against Route 53 hosted zones</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> HTTP/2 rapid reset attack</li></ul><h4 style="color: #f87171;">Account-Level Attack Vectors</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> shield:DeleteProtection removes DDoS protection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> shield:DisassociateHealthCheck blinds detection</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> shield:DisableProactiveEngagement prevents SRT contact</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> shield:DisassociateDRTRole revokes SRT access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> shield:UpdateSubscription with AutoRenew=DISABLED</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">External DDoS Attack Types</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>UDP reflection/amplification</strong> -- Attacker spoofs source IP to trigger DNS, NTP, SSDP, or memcached servers to flood the target with response traffic</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>SYN flood</strong> -- Exhausts TCP connection state tables on the target by sending high volumes of SYN packets without completing the handshake</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>HTTP request flood</strong> -- Overwhelms application-layer resources with legitimate-looking HTTP requests (requires Shield Advanced for automatic mitigation)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>DNS query flood</strong> -- Floods Route 53 hosted zones with DNS queries to exhaust resolver capacity</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>HTTP/2 rapid reset attack</strong> -- Exploits HTTP/2 stream multiplexing by rapidly opening and resetting streams, consuming server resources</li></ul><h4 style="color: #f87171;">Account-Level Attack Vectors (Post-Compromise)</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>shield:DeleteProtection</strong> -- Attacker with account access removes DDoS protection from critical resources before launching an attack</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>shield:DisassociateHealthCheck</strong> -- Removes health-based detection, blinding Shield Advanced to application degradation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>shield:DisableProactiveEngagement</strong> -- Prevents the SRT from proactively contacting the organization during detected events</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>shield:DisassociateDRTRole</strong> -- Revokes SRT access to the account, eliminating expert support during an active attack</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>shield:DeleteSubscription (deprecated)</strong> -- The DeleteSubscription API is deprecated; cancellation now requires contacting AWS Support. An attacker can use <code>shield:UpdateSubscription</code> with <code>AutoRenew=DISABLED</code> to prevent subscription renewal instead</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Protection Coverage Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Internet-facing resources not added to Shield Advanced</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No health checks associated with protections</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Proactive engagement not enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Emergency contacts not configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Protection groups not defined</li></ul><h4 style="color: #fb923c;">Operational Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No WAF web ACL on application-layer resources</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DRT role not granted for SRT access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DRT log bucket not associated</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using Advanced without Business/Enterprise Support</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No Firewall Manager for multi-account deployment</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Protection Coverage Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Internet-facing resources not added to Shield Advanced</strong> -- Shield Advanced requires explicit per-resource enrollment; unprotected ALBs, CloudFront distributions, or Elastic IPs receive only Standard-tier coverage</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No health checks associated with protections</strong> -- Without Route 53 health checks, Shield Advanced cannot use health-based detection, resulting in slower detection and higher false-positive rates</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Proactive engagement not enabled</strong> -- SRT cannot proactively reach out during detected events, delaying expert response</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Emergency contacts not configured</strong> -- SRT has no way to reach the organization during an active DDoS event; defaults to no notifications</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Protection groups not defined</strong> -- Without protection groups, detection cannot correlate traffic patterns across related resources</li></ul><h4 style="color: #fb923c;">Operational Misconfigurations</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No WAF web ACL on application-layer resources</strong> -- Shield Advanced automatic application-layer mitigation requires an associated AWS WAF web ACL; without it, Layer 7 protection is not active</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>DRT role not granted</strong> -- SRT cannot access WAF rules or logs to assist with mitigation if no IAM role is associated via AssociateDRTRole</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>DRT log bucket not associated</strong> -- SRT lacks visibility into VPC flow logs or WAF logs needed for attack analysis</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Using Shield Advanced without Business/Enterprise Support</strong> -- SRT access requires a Business Support or Enterprise Support plan; without it, the SRT is unreachable even with an active subscription</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Not using Firewall Manager for multi-account Shield deployment</strong> -- In AWS Organizations, manually managing Shield protections per account leads to coverage gaps when new resources are created</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
-          <div class="cmd-title">Check Subscription Status</div>
-          <pre><code>aws shield get-subscription-state</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Describe Subscription Details</div>
-          <pre><code>aws shield describe-subscription</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List All Protected Resources</div>
-          <pre><code>aws shield list-protections</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Recent DDoS Attacks</div>
-          <pre><code>aws shield list-attacks \
-  --start-time FromInclusive=2026-01-01T00:00:00Z,ToExclusive=2026-03-30T00:00:00Z</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check DRT Access Configuration</div>
-          <pre><code>aws shield describe-drt-access</code></pre>
-        </div></div>
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><h4 style="color: #22d3ee;">Check Subscription Status</h4><pre><code>aws shield get-subscription-state</code></pre><h4 style="color: #22d3ee;">Describe Shield Advanced Subscription Details</h4><pre><code>aws shield describe-subscription</code></pre><h4 style="color: #22d3ee;">List All Protected Resources</h4><pre><code>aws shield list-protections</code></pre><h4 style="color: #22d3ee;">Describe Protection for a Specific Resource</h4><pre><code>aws shield describe-protection \
+  --resource-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-alb/1234567890123456</code></pre><h4 style="color: #22d3ee;">List Recent DDoS Attacks</h4><pre><code>aws shield list-attacks \
+  --start-time FromInclusive=2026-01-01T00:00:00Z,ToExclusive=2026-03-30T00:00:00Z</code></pre><h4 style="color: #22d3ee;">Describe a Specific Attack</h4><pre><code>aws shield describe-attack \
+  --attack-id a1b2c3d4-5678-90ab-cdef-EXAMPLE11111</code></pre><h4 style="color: #22d3ee;">Describe Attack Statistics</h4><pre><code>aws shield describe-attack-statistics</code></pre><h4 style="color: #22d3ee;">List Protection Groups</h4><pre><code>aws shield list-protection-groups</code></pre><h4 style="color: #22d3ee;">Check DRT Access Configuration</h4><pre><code>aws shield describe-drt-access</code></pre><h4 style="color: #22d3ee;">Check Emergency Contact Settings</h4><pre><code>aws shield describe-emergency-contact-settings</code></pre><p>---</p></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Direct Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:CreateSubscription + shield:CreateProtection causes $3K/month charges</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:AssociateDRTRole grants SRT overly broad access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:AssociateDRTLogBucket grants SRT read access to S3</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> iam:PassRole + shield:AssociateDRTRole passes privileged role to SRT</li></ul><h4 style="color: #c084fc;">Indirect Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:DeleteProtection + external DDoS for financial damage</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:UpdateEmergencyContactSettings redirects SRT notifications</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> shield:EnableApplicationLayerAutomaticResponse with malicious WAF rules</li></ul></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Disabling Defenses</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete protections from critical resources before attack</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disassociate health checks to blind detection</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable proactive engagement to prevent SRT contact</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Revoke DRT role access during active attack</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Set AutoRenew=DISABLED to prevent subscription renewal</li></ul><h4 style="color: #facc15;">Maintaining Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Redirect emergency contacts to attacker email</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Associate DRT log bucket to sensitive data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify application-layer automatic response rules</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Remove protection groups to degrade detection</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteProtection - protection removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisassociateHealthCheck - health check removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableProactiveEngagement - SRT blocked</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisassociateDRTRole - SRT access revoked</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateSubscription - subscription modified</li></ul><h4 style="color: #4ade80;">CloudWatch Metrics</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DDoSDetected - active DDoS attack</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DDoSAttackBitsPerSecond - volumetric attack rate</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DDoSAttackPacketsPerSecond - packet flood rate</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DDoSAttackRequestsPerSecond - request flood rate</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Remove Protection from Resource</div>
-          <pre><code>aws shield delete-protection \
-  --protection-id abc123-def456</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disassociate Health Check</div>
-          <pre><code>aws shield disassociate-health-check \
-  --protection-id abc123-def456 \
-  --health-check-arn arn:aws:route53:::healthcheck/12345678</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable Proactive Engagement</div>
-          <pre><code>aws shield disable-proactive-engagement</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Revoke DRT Role Access</div>
-          <pre><code>aws shield disassociate-drt-role</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Redirect Emergency Contacts</div>
-          <pre><code>aws shield update-emergency-contact-settings \
-  --emergency-contact-list EmailAddress=attacker@evil.com</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable Auto-Renew</div>
-          <pre><code>aws shield update-subscription \
-  --auto-renew DISABLED</code></pre>
-        </div></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Direct Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:CreateSubscription + shield:CreateProtection</strong> -- An attacker who gains these permissions can subscribe the account to Shield Advanced ($3,000/month) and add protections, causing unexpected charges</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:AssociateDRTRole</strong> -- Grants the SRT access to the account; an attacker could configure a role that grants overly broad access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:AssociateDRTLogBucket</strong> -- Grants SRT read access to an S3 bucket; an attacker could point this to sensitive buckets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>iam:PassRole + shield:AssociateDRTRole</strong> -- Pass a privileged IAM role to the SRT service, potentially granting it access beyond what is needed for DDoS response</li></ul><h4 style="color: #c084fc;">Indirect Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:DeleteProtection on all resources</strong> -- Combined with an external DDoS, this creates a denial-of-service that can cause financial damage through unmitigated scaling</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:UpdateEmergencyContactSettings</strong> -- Redirect SRT notifications to attacker-controlled email addresses, hijacking incident communications</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>shield:EnableApplicationLayerAutomaticResponse with permissive WAF rules</strong> -- Could interfere with legitimate traffic if configured maliciously</li></ul><p>---</p></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Shield Access</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous -- Overly Permissive Shield Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;shield:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;shield:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Allows removing protections, revoking DRT access, and fully dismantling DDoS defenses</p>
+          <p class="policy-desc"><strong>Risk:</strong> Allows creating/deleting subscriptions, removing protections from resources, revoking DRT access, and disabling proactive engagement. An attacker with this policy can fully dismantle DDoS defenses.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure -- Read-Only Shield Monitoring</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;shield:Describe*&quot;,
-    &quot;shield:List*&quot;,
-    &quot;shield:GetSubscriptionState&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;ShieldReadOnly&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;shield:Describe*&quot;,
+        &quot;shield:List*&quot;,
+        &quot;shield:GetSubscriptionState&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Sid&quot;: &quot;ProtectedResourcesReadAccess&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudfront:List*&quot;,
+        &quot;cloudfront:GetDistribution*&quot;,
+        &quot;elasticloadbalancing:Describe*&quot;,
+        &quot;route53:List*&quot;,
+        &quot;globalaccelerator:ListAccelerators&quot;,
+        &quot;globalaccelerator:DescribeAccelerator&quot;,
+        &quot;ec2:DescribeAddresses&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Sid&quot;: &quot;CloudWatchMetrics&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudwatch:Describe*&quot;,
+        &quot;cloudwatch:Get*&quot;,
+        &quot;cloudwatch:List*&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Visibility into protections and attack events without ability to modify defenses</p>
+          <p class="policy-desc"><strong>Why:</strong> Grants visibility into Shield protections, attack events, and protected resource status without the ability to modify DDoS defenses. Includes CloudWatch for viewing Shield metrics.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - SCP Prevent Disabling</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure -- SCP to Prevent Disabling Shield Advanced</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: [
-    &quot;shield:DeleteProtection&quot;,
-    &quot;shield:DisableProactiveEngagement&quot;,
-    &quot;shield:DisassociateDRTRole&quot;,
-    &quot;shield:DisassociateHealthCheck&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;PreventShieldDisable&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;shield:DeleteProtection&quot;,
+        &quot;shield:DeleteSubscription&quot;,
+        &quot;shield:DisableProactiveEngagement&quot;,
+        &quot;shield:DisassociateDRTRole&quot;,
+        &quot;shield:DisassociateDRTLogBucket&quot;,
+        &quot;shield:DisassociateHealthCheck&quot;,
+        &quot;shield:DisableApplicationLayerAutomaticResponse&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;,
+      &quot;Condition&quot;: {
+        &quot;ArnNotLike&quot;: {
+          &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/ShieldAdmin&quot;
+        }
+      }
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Prevents anyone from disabling protections or revoking SRT access</p>
+          <p class="policy-desc"><strong>Why:</strong> Prevents anyone except a dedicated ShieldAdmin role from disabling protections, removing health checks, or revoking SRT access. Deploy as an SCP in AWS Organizations.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6E1;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable Shield Advanced on All Resources</h4>
-              <p>Add explicit protections to every CloudFront, ALB, Elastic IP, Global Accelerator, and Route 53 resource.</p>
+              <h4>Enable Shield Advanced on All Internet-Facing Resources</h4>
+              <p>Add explicit Shield Advanced protections to every CloudFront distribution, Application Load Balancer, Elastic IP, Global Accelerator, and Route 53 hosted zone that serves production traffic.</p>
               <pre><code>aws shield create-protection \
-  --name &quot;prod-alb&quot; \
-  --resource-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/prod-alb/1234</code></pre>
+  --name &quot;prod-alb-protection&quot; \
+  --resource-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/prod-alb/1234567890123456</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2764;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Associate Route 53 Health Checks</h4>
+              <h4>Associate Route 53 Health Checks for Health-Based Detection</h4>
               <p>Health checks enable faster, more accurate detection and are required for proactive engagement.</p>
               <pre><code>aws shield associate-health-check \
   --protection-id abc123-def456 \
-  --health-check-arn arn:aws:route53:::healthcheck/12345678</code></pre>
+  --health-check-arn arn:aws:route53:::healthcheck/12345678-abcd-efgh-ijkl-123456789012</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DE;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable Proactive Engagement</h4>
-              <p>Allow the SRT to contact you proactively during detected events. Configure emergency contacts.</p>
+              <h4>Enable Proactive Engagement and Configure Emergency Contacts</h4>
+              <p>Allow the SRT to contact you proactively during detected events.</p>
+              <pre><code>aws shield update-emergency-contact-settings \
+  --emergency-contact-list EmailAddress=security@example.com,PhoneNumber=+15551234567,ContactNotes=&quot;Security team on-call&quot;</code></pre>
               <pre><code>aws shield enable-proactive-engagement</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F510;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Grant DRT Access with Scoped Role</h4>
-              <p>Give the SRT access they need during an attack without over-privileging.</p>
+              <h4>Grant DRT Access with a Scoped IAM Role</h4>
+              <p>Give the SRT the access they need to help during an attack without over-privileging.</p>
               <pre><code>aws shield associate-drt-role \
   --role-arn arn:aws:iam::123456789012:role/AWSSRTAccessRole</code></pre>
+              <pre><code>aws shield associate-drt-log-bucket \
+  --log-bucket my-waf-logs-bucket</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F916;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable Auto Application-Layer Mitigation</h4>
+              <h4>Enable Automatic Application-Layer DDoS Mitigation</h4>
               <p>Requires an AWS WAF web ACL associated with the protected resource.</p>
               <pre><code>aws shield enable-application-layer-automatic-response \
-  --resource-arn RESOURCE_ARN \
+  --resource-arn arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/prod-alb/1234567890123456 \
   --action Block={}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4CA;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Create Protection Groups</h4>
+              <h4>Create Protection Groups for Correlated Detection</h4>
               <p>Group related resources so Shield Advanced can detect distributed attacks across multiple endpoints.</p>
               <pre><code>aws shield create-protection-group \
   --protection-group-id &quot;prod-web-tier&quot; \
   --aggregation SUM \
-  --pattern ARBITRARY</code></pre>
+  --pattern ARBITRARY \
+  --members arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/prod-alb/1234567890123456</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Use AWS Firewall Manager for Multi-Account Shield Deployment</h4>
+              <p>In AWS Organizations, use Firewall Manager Shield Advanced policies to automatically protect resources across all member accounts and detect unprotected resources.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Deploy an SCP to Prevent Disabling Shield Protections</h4>
+              <p>Use the SCP example above in AWS Organizations to prevent unauthorized removal of DDoS protections.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Monitor Shield Metrics in CloudWatch</h4>
+              <p>Key metrics to alarm on: <code>DDoSDetected</code>, <code>DDoSAttackBitsPerSecond</code>, <code>DDoSAttackPacketsPerSecond</code>, <code>DDoSAttackRequestsPerSecond</code> in the <code>AWS/DDoSProtection</code> namespace. AWS Shield / Shield Advanced Security Card -- Toc Consulting Always obtain proper authorization before testing. DDoS testing against AWS resources requires prior approval from AWS per the AWS Acceptable Use Policy.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS Shield Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Shield Security Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

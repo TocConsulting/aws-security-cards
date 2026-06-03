@@ -521,7 +521,7 @@ type Secret @auth(rules: [{allow: private}]) {
     &quot;Resource&quot;: &quot;arn:aws:dynamodb:us-east-1:*:table/Users&quot;,
     &quot;Condition&quot;: {
       &quot;ForAllValues:StringEquals&quot;: {
-        &quot;dynamodb:LeadingKeys&quot;: [&quot;\${appsync:sub}&quot;]
+        &quot;dynamodb:LeadingKeys&quot;: [&quot;\${cognito-identity.amazonaws.com:sub}&quot;]
       }
     }
   }]

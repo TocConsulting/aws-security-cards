@@ -101,7 +101,7 @@ aws guardduty list-filters --detector-id abc123
 
 ### IAM Findings
 
-- UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration
+- UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS
 - Recon:IAMUser/MaliciousIPCaller
 - PenTest:IAMUser/KaliLinux
 - Persistence:IAMUser/AnomalousBehavior

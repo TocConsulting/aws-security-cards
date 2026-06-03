@@ -275,7 +275,7 @@
           <div class="stat-label">Risk Level</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">Prev/Det/Pro</div>
+          <div class="stat-value" style="color: #4ade80;">Preventive / Detective / Proactive</div>
           <div class="stat-label">Control Types</div>
         </div>
         <div class="stat-card">
@@ -283,24 +283,31 @@
           <div class="stat-label">Governance</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">Mgmt Account</div>
+          <div class="stat-value" style="color: #c084fc;">Management Account</div>
           <div class="stat-label">Top Target</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#06b6d4;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
-          <h4 style="color: #06b6d4;">Landing Zone &amp; Controls</h4>
-          <p>Pre-configured secure multi-account environment. Preventive controls (SCPs), detective controls (Config rules), and proactive controls (CloudFormation Hooks). Mandatory controls cannot be disabled.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> The management account is exempt from all preventive controls (SCPs). Any identity in this account can bypass every guardrail.</div>
-        </div>
-        <div>
-          <h4 style="color: #06b6d4;">Account Factory &amp; Key Roles</h4>
-          <p>Standardized account provisioning via Service Catalog. Creates AWSControlTowerExecution role in every member account with AdministratorAccess, trusting the management account root.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> AWSControlTowerExecution in every member account has AdministratorAccess and trusts the management account root with no conditions by default.</div>
+          <h4 style="color: #06b6d4;">Landing Zone</h4>
+          <p>A pre-configured, secure multi-account environment based on AWS best practices. Deploys a Security OU (with Log Archive and Audit accounts) and a user-named additional OU (commonly called Sandbox). Managed via the <code>aws controltower</code> API (28 subcommands covering controls, landing zones, baselines, and tagging).</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Critical:</span> The management account is exempt from all preventive controls (SCPs and RCPs). Any identity in this account can bypass every guardrail.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">Controls (Guardrails)</h4>
+          <p>Three behavioral types enforce governance across enrolled OUs: - <strong>Preventive</strong> -- Implemented as SCPs (or RCPs). Block disallowed actions before they execute. Example: disallow changes to CloudTrail configuration. - <strong>Detective</strong> -- Implemented as AWS Config rules (service-linked). Detect non-compliant resources after deployment. Example: detect whether public read access to S3 is allowed. - <strong>Proactive</strong> -- Implemented as CloudFormation Hooks. Validate resource compliance at provision time, blocking non-compliant resources before creation. Three guidance categories: <strong>Mandatory</strong> (always on, cannot be disabled), <strong>Strongly Recommended</strong>, and <strong>Elective</strong>.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Disabling or detaching a detective control does not remediate existing non-compliant resources -- it simply stops detecting them.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">Account Factory</h4>
+          <p>Standardized account provisioning via AWS Service Catalog. Creates new accounts with the <code>AWSControlTowerExecution</code> role pre-installed. Account Factory for Terraform (AFT) extends this with IaC-based customization pipelines.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> The <code>AWSControlTowerExecution</code> role in every member account has <code>AdministratorAccess</code> and trusts the management account root principal with no conditions by default.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">Key IAM Roles</h4>
+          <p>| Role | Location | Purpose | | --- | --- | --- | | <code>AWSControlTowerExecution</code> | Every member account | Full admin access, trusts management account | | <code>AWSControlTowerAdmin</code> | Management account | Creates Config aggregators, runs Control Tower operations | | <code>AWSControlTowerCloudTrailRole</code> | Management account | Manages centralized CloudTrail | | <code>AWSControlTowerStackSetRole</code> | Management account | Deploys StackSets to member accounts | | <code>aws-controltower-AuditAdministratorRole</code> | Audit account | Lambda-only, cross-account admin via <code>aws-controltower-AdministratorExecutionRole</code> | | <code>aws-controltower-AuditReadOnlyRole</code> | Audit account | Lambda-only, cross-account read-only via <code>aws-controltower-ReadOnlyExecutionRole</code> |</p>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,46 +322,56 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Compromise of the management account means full admin access to every enrolled member account via AWSControlTowerExecution. Disabling controls removes guardrails organization-wide. Drift introduced by an attacker can disable security detection without obvious alerts.</p>
+  <p class="risk-desc">AWS Control Tower is the governance layer for the entire organization. Compromise of the management account means full admin access to every enrolled member account via the <code>AWSControlTowerExecution</code> role. Disabling controls removes guardrails organization-wide. Drift introduced by an attacker can disable security detection without triggering obvious alerts.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Management Account Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Assume AWSControlTowerExecution in any member account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit weakly-scoped IAM policies for role assumption</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Compromise AWSControlTowerAdmin role</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target Account Factory / AFT pipeline credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Social-engineer org administrators</li></ul><h4 style="color: #f87171;">Control &amp; Landing Zone Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable preventive controls (SCPs) on OUs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable detective controls to stop compliance monitoring</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Introduce landing zone drift by modifying SCPs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete/modify AWSControlTowerCloudTrailRole</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse delegated administrator privileges</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Management Account Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal credentials for identities in the management account with <code>sts:AssumeRole</code> on <code>AWSControlTowerExecution</code> to pivot to any member account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit weakly-scoped IAM policies (e.g., <code>Resource: &quot;*&quot;</code>) to assume the <code>AWSControlTowerExecution</code> role in member accounts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Compromise the <code>AWSControlTowerAdmin</code> role to modify landing zone configuration</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Social-engineer org administrators who have access to Control Tower console</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target Account Factory / AFT pipeline credentials (Terraform tokens, git tokens) to inject malicious account customizations</li></ul><h4 style="color: #f87171;">Control and Landing Zone Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable preventive controls (SCPs) to remove security restrictions from OUs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable detective controls to stop compliance monitoring silently</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Introduce landing zone drift by modifying SCPs or moving accounts outside Control Tower</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete or modify the <code>AWSControlTowerCloudTrailRole</code> to disrupt centralized logging (triggers role drift but buys time)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse delegated administrator privileges to escalate access across the organization</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Dangerous Defaults</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AWSControlTowerExecution trusts mgmt account root with no conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No Permissions Boundaries on management account identities</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Only mandatory controls enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Account Factory provisions without additional SCPs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Audit account Lambda roles have cross-account admin</li></ul><h4 style="color: #fb923c;">Governance Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No alerting for control disable/enable operations</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Landing zone drift not monitored</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AFT pipeline credentials stored without rotation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SCP protecting Control Tower roles in member accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Management account used for daily workloads</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Dangerous Defaults</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <code>AWSControlTowerExecution</code> role trusts the management account root with no conditions -- any identity with <code>sts:AssumeRole</code> and a wildcard resource can pivot to all member accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No Permissions Boundaries applied to management account identities to prevent unauthorized role assumption</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Only mandatory controls enabled; strongly recommended and elective controls left disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Account Factory provisions accounts without additional SCPs or Permissions Boundaries</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Audit account Lambda roles (<code>aws-controltower-AuditAdministratorRole</code>) have cross-account admin access via role chaining</li></ul><h4 style="color: #fb923c;">Governance Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No alerting configured for control disable/enable operations</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Landing zone drift not monitored or auto-remediated (auto-enrollment for inheritance drift disabled by default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AFT pipeline credentials (Terraform tokens) stored without rotation policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SCP protecting Control Tower roles from modification in member accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Management account used for daily workloads instead of being isolated to Control Tower administration only</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List Landing Zones</div>
           <pre><code>aws controltower list-landing-zones</code></pre>
         </div><div class="cmd-block">
+          <div class="cmd-title">Get Landing Zone Details (version, drift status)</div>
+          <pre><code>aws controltower get-landing-zone \
+  --landing-zone-identifier arn:aws:controltower:us-east-1:123456789012:landingzone/LANDING_ZONE_ID</code></pre>
+        </div><div class="cmd-block">
           <div class="cmd-title">List Enabled Controls on an OU</div>
           <pre><code>aws controltower list-enabled-controls \
-  --target-identifier arn:aws:organizations::123456789012:ou/o-abc/ou-abc-xyz</code></pre>
+  --target-identifier arn:aws:organizations::123456789012:ou/o-abc1234xyz/ou-abc-xyz</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">List Drifted Controls</div>
+          <div class="cmd-title">List Enabled Controls Filtered by Drift Status</div>
           <pre><code>aws controltower list-enabled-controls \
-  --target-identifier OU_ARN \
-  --filter '{"driftStatuses":["DRIFTED"]}'</code></pre>
+  --target-identifier arn:aws:organizations::123456789012:ou/o-abc1234xyz/ou-abc-xyz \
+  --filter '{&quot;driftStatuses&quot;:[&quot;DRIFTED&quot;]}'</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">List All Baselines</div>
           <pre><code>aws controltower list-baselines</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">List Organization Accounts</div>
+          <div class="cmd-title">List Enabled Baselines</div>
+          <pre><code>aws controltower list-enabled-baselines</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Details of a Specific Enabled Control</div>
+          <pre><code>aws controltower get-enabled-control \
+  --enabled-control-identifier arn:aws:controltower:us-east-1:123456789012:enabledcontrol/CONTROL_ID</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Enumerate Organization Accounts (via Organizations API)</div>
           <pre><code>aws organizations list-accounts \
-  --query 'Accounts[*].[Id,Name,Status]' --output table</code></pre>
+  --query 'Accounts[*].[Id,Name,Status]' \
+  --output table</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List SCPs Applied to an OU (via Organizations API)</div>
+          <pre><code>aws organizations list-policies-for-target \
+  --target-id ou-xxxx-xxxxxxxx \
+  --filter SERVICE_CONTROL_POLICY</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">From Member to Full Org Access</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Assume AWSControlTowerExecution in any member account</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Audit account role chain to AdministratorExecutionRole</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Register compromised account as delegated admin</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit management account identity with sts:AssumeRole *</li></ul><h4 style="color: #c084fc;">From Management Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Disable preventive controls to remove SCP restrictions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Disable detective controls to blind compliance</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify landing zone manifest to weaken security</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create new accounts with attacker-controlled settings</li></ul><div class="note"><strong>Key insight:</strong> AWSControlTowerExecution has AdministratorAccess in every member account. A single sts:AssumeRole with Resource: * in the management account is enough to pivot to all accounts.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Maintaining Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> AWSControlTowerExecution role persists across account lifecycle</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add conditions bypass in member account trust policies</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create accounts via Account Factory with backdoor settings</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register as delegated administrator for sensitive services</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Store AFT pipeline credentials for future access</li></ul><h4 style="color: #facc15;">Evading Detection</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Introduce drift that disables detective controls</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify CloudTrail role to disrupt centralized logging</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Move accounts between OUs to bypass controls</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable auto-enrollment for new accounts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Use management account (exempt from SCPs)</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">Critical CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableControl / EnableControl - control changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateLandingZone / ResetLandingZone - LZ modifications</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssumeRole on AWSControlTowerExecution</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateManagedAccount - new account creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisableBaseline - baseline removal</li></ul><h4 style="color: #4ade80;">Drift Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SCP modifications outside Control Tower</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Accounts moved between OUs manually</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Control Tower roles modified in member accounts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Landing zone status showing DRIFTED</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CloudTrail configuration changes</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Assume AWSControlTowerExecution</div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">From Member Account to Full Organization Access</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Identify the management account ID from <code>aws organizations describe-organization</code></li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Check if <code>AWSControlTowerExecution</code> role exists and its trust policy (it trusts management account root by default)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> If you compromise any identity in the management account with <code>sts:AssumeRole</code> permissions, assume <code>AWSControlTowerExecution</code> in any member account for full admin</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse the Audit account's <code>aws-controltower-AuditAdministratorRole</code> chain: Lambda in audit account assumes <code>AuditAdministratorRole</code>, which assumes <code>AdministratorExecutionRole</code> in member accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit delegated administrator registration: if an attacker has <code>organizations:RegisterDelegatedAdministrator</code>, they can register a compromised account as delegated admin for sensitive services</li></ul><h4 style="color: #c084fc;">From Management Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Assume <code>AWSControlTowerExecution</code> in any member account for <code>AdministratorAccess</code></li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Disable preventive controls to remove SCP restrictions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Disable detective controls to blind compliance monitoring</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify landing zone manifest to weaken security configuration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create new accounts via Account Factory with attacker-controlled settings</li></ul><div class="cmd-block">
+          <div class="cmd-title">Assume AWSControlTowerExecution in a Member Account</div>
           <pre><code>aws sts assume-role \
   --role-arn arn:aws:iam::MEMBER_ACCOUNT_ID:role/AWSControlTowerExecution \
   --role-session-name ct-pivot</code></pre>
@@ -362,109 +379,181 @@
           <div class="cmd-title">Disable a Control on an OU</div>
           <pre><code>aws controltower disable-control \
   --control-identifier arn:aws:controltower:us-east-1::control/CONTROL_ID \
-  --target-identifier OU_ARN</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List SCPs on an OU</div>
-          <pre><code>aws organizations list-policies-for-target \
-  --target-id ou-xxxx-xxxxxxxx \
-  --filter SERVICE_CONTROL_POLICY</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Get Landing Zone Drift Status</div>
-          <pre><code>aws controltower get-landing-zone \
-  --landing-zone-identifier LZ_ARN</code></pre>
+  --target-identifier arn:aws:organizations::123456789012:ou/o-abc1234xyz/ou-abc-xyz</code></pre>
         </div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Wildcard AssumeRole in Mgmt Account</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: AWSControlTowerExecution Default Trust (No Conditions)</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;AWS&quot;: &quot;arn:aws:iam::MANAGEMENT_ACCOUNT_ID:root&quot;
+    },
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Allows assumption of AWSControlTowerExecution in every member account -- full org compromise</p>
+          <p class="policy-desc">Any identity in the management account with <code>sts:AssumeRole</code> and a wildcard resource policy can assume this role. No MFA, no IP restriction, no principal tag condition.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Permissions Boundary Blocking CT Role</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: AWSControlTowerExecution with Restrictive Conditions</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
-  &quot;Resource&quot;: &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Principal&quot;: {
+      &quot;AWS&quot;: &quot;arn:aws:iam::MANAGEMENT_ACCOUNT_ID:root&quot;
+    },
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;aws:PrincipalTag/team&quot;: &quot;platform-engineering&quot;
+      },
+      &quot;IpAddress&quot;: {
+        &quot;aws:SourceIp&quot;: &quot;203.0.113.0/24&quot;
+      }
+    }
+  }]
 }</code></pre>
-          <p class="policy-desc">Applied as Permissions Boundary to block unauthorized pivoting to member accounts</p>
+          <p class="policy-desc">Restricts role assumption to principals tagged as platform-engineering from a known IP range. Reduces blast radius of compromised management account credentials.</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: Management Account Identity with Wildcard AssumeRole</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Allows assumption of AWSControlTowerExecution in every member account. This is the exact pattern that enables the TrustedSec-documented pivoting attack.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - SCP Protecting CT Roles</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: Permissions Boundary Blocking AWSControlTowerExecution Assumption</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: [&quot;iam:DeleteRole&quot;, &quot;iam:PutRolePolicy&quot;, &quot;iam:UpdateAssumeRolePolicy&quot;],
-  &quot;Resource&quot;: [&quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;, &quot;arn:aws:iam::*:role/aws-controltower-*&quot;]
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;*&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: &quot;sts:AssumeRole&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Prevents member account identities from modifying or deleting Control Tower roles</p>
+          <p class="policy-desc">Applied as a Permissions Boundary to all IAM users, roles, and Identity Center Permission Sets in the management account. Prevents unauthorized pivoting to member accounts via AWSControlTowerExecution.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: SCP Protecting Control Tower Roles in Member Accounts</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Sid&quot;: &quot;ProtectControlTowerRoles&quot;,
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;iam:AttachRolePolicy&quot;,
+      &quot;iam:DeleteRole&quot;,
+      &quot;iam:DeleteRolePolicy&quot;,
+      &quot;iam:DetachRolePolicy&quot;,
+      &quot;iam:PutRolePolicy&quot;,
+      &quot;iam:UpdateAssumeRolePolicy&quot;
+    ],
+    &quot;Resource&quot;: [
+      &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;,
+      &quot;arn:aws:iam::*:role/aws-controltower-*&quot;
+    ],
+    &quot;Condition&quot;: {
+      &quot;ArnNotLike&quot;: {
+        &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:role/AWSControlTowerExecution&quot;
+      }
+    }
+  }]
+}</code></pre>
+          <p class="policy-desc">Prevents member account identities from modifying or deleting Control Tower roles. Only the AWSControlTowerExecution role itself (used by Control Tower operations) can modify these roles.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F3E2;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Isolate the Management Account</h4>
-              <p>Run zero production workloads. Restrict to Control Tower administration, Organizations management, and billing only.</p>
+              <p>Run zero production workloads in the management account. Restrict it to Control Tower administration, Organizations management, and billing only. Apply strict identity controls: hardware MFA on root, minimal IAM users, and short-lived sessions via Identity Center.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6E1;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Apply Permissions Boundaries</h4>
-              <p>Deny sts:AssumeRole against AWSControlTowerExecution on all management account identities.</p>
+              <h4>Apply Permissions Boundaries in the Management Account</h4>
+              <p>Attach Permissions Boundaries to all IAM users, roles, and Identity Center Permission Sets that deny <code>sts:AssumeRole</code> against <code>AWSControlTowerExecution</code>. This blocks the default pivoting path documented by TrustedSec.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Add Conditions to CT Execution Trust</h4>
-              <p>Modify trust policy on AWSControlTowerExecution in member accounts to require principal tags or IP ranges.</p>
+              <h4>Add Conditions to AWSControlTowerExecution Trust Policies</h4>
+              <p>Modify the trust policy on <code>AWSControlTowerExecution</code> in every member account to require specific principal tags, source IP ranges, or named principal ARNs. This must be reapplied after account enrollment since Control Tower resets the trust policy.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2705;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable All Strongly Recommended Controls</h4>
-              <p>Do not rely only on mandatory controls. Enable all strongly recommended preventive and detective controls.</p>
+              <p>Do not rely only on mandatory controls. Enable all strongly recommended preventive and detective controls. Evaluate elective controls for your threat model.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F514;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Monitor Control Tower API Calls</h4>
-              <p>Alert on DisableControl, EnableControl, UpdateLandingZone, and AWSControlTowerExecution role assumptions.</p>
+              <p>Configure CloudTrail alerts (via EventBridge) for these critical events: - <code>DisableControl</code> / <code>EnableControl</code> -- control changes - <code>UpdateLandingZone</code> / <code>ResetLandingZone</code> -- landing zone modifications - <code>DisableBaseline</code> -- baseline removal - <code>CreateAccount</code> (Organizations) or <code>controltower:CreateManagedAccount</code> / Service Catalog <code>ProvisionProduct</code> -- new account creation - Role assumption of <code>AWSControlTowerExecution</code> in CloudTrail</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Protect CT Roles via SCP</h4>
-              <p>Deploy SCP denying modification/deletion of AWSControlTowerExecution and aws-controltower-* roles by member accounts.</p>
+              <h4>Protect Control Tower Roles via SCP</h4>
+              <p>Deploy an SCP that denies modification or deletion of <code>AWSControlTowerExecution</code> and <code>aws-controltower-*</code> roles by member account identities.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Monitor and Remediate Drift</h4>
+              <p>Check landing zone drift status regularly via <code>aws controltower get-landing-zone</code>. Enable auto-enrollment to remediate inheritance drift when accounts move between OUs. Alert on drift detection via SNS notifications from the audit account.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS Control Tower Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Control Tower Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

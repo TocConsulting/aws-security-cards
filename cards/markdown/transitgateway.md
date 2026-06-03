@@ -312,7 +312,6 @@ TGW flow logs are not enabled by default. Enable them to detect traffic anomalie
 aws ec2 create-flow-logs \\
   --resource-type TransitGateway \\
   --resource-ids tgw-abc123 \\
-  --traffic-type ALL \\
   --log-destination-type s3 \\
   --log-destination arn:aws:s3:::flow-logs-bucket
 ```

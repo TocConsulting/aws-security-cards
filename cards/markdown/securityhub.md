@@ -169,6 +169,7 @@ aws securityhub batch-update-findings \\
 ```bash
 aws securityhub create-automation-rule \\
   --rule-name "SuppressAll" \\
+  --description "Suppress all critical findings" \\
   --rule-order 1 \\
   --criteria '{"SeverityLabel":[{"Value":"CRITICAL","Comparison":"EQUALS"}]}' \\
   --actions '[{"Type":"FINDING_FIELDS_UPDATE","FindingFieldsUpdate":{"Workflow":{"Status":"SUPPRESSED"}}}]'
@@ -239,7 +240,7 @@ aws securityhub disable-import-findings-for-product \\
     "Action": [
       "securityhub:BatchUpdateFindings",
       "securityhub:CreateAutomationRule",
-      "securityhub:UpdateAutomationRule"
+      "securityhub:BatchUpdateAutomationRules"
     ],
     "Resource": "*"
   }]

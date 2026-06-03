@@ -179,7 +179,7 @@ curl http://169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 **Get Build Logs**
 ```bash
 aws logs get-log-events \\
-  --log-group-name /aws/apprunner/SERVICE/BUILD
+  --log-group-name /aws/apprunner/SERVICE/service
 ```
 
 **Get Application Logs**

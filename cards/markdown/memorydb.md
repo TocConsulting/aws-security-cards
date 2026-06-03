@@ -139,7 +139,7 @@ aws memorydb describe-acls
 - CreateCluster - new cluster
 - CreateSnapshot - snapshot creation
 - CopySnapshot - cross-account copy
-- ModifyCluster - config changes
+- UpdateCluster - config changes
 - CreateUser - new user creation
 
 ### Indicators of Compromise
@@ -264,7 +264,7 @@ aws memorydb create-snapshot \\
 Require authentication for all connections. Disable default user or set strong password.
 
 ```bash
-aws memorydb create-user --user-name app --access-string 'on ~app:* +@read'
+aws memorydb create-user --user-name app --access-string 'on ~app:* +@read' --authentication-mode Type=password,Passwords="<strong-password>"
 ```
 
 ### 🔒 Enforce TLS

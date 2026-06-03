@@ -20,7 +20,7 @@ ECR stores Docker and OCI container images in private or public repositories. Ea
 
 ### Image Scanning & Signing
 
-ECR offers basic scanning (Clair-based) and enhanced scanning (Amazon Inspector) for CVE detection. Image signing via AWS Signer or Notation validates image provenance. Without signing verification, any image pushed to a repository can be deployed to production.
+ECR offers basic scanning (Amazon-native, formerly Clair-based) and enhanced scanning (Amazon Inspector) for CVE detection. Image signing via AWS Signer or Notation validates image provenance. Without signing verification, any image pushed to a repository can be deployed to production.
 
 ### Lifecycle & Replication
 

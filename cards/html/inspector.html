@@ -372,8 +372,8 @@
           <pre><code>aws inspector2 list-findings \\
   --filter-criteria '{
     &quot;resourceType&quot;: [{&quot;comparison&quot;: &quot;EQUALS&quot;, &quot;value&quot;: &quot;AWS_EC2_INSTANCE&quot;}],
-    &quot;networkReachability.networkPath.destination.portRanges&quot;: [
-      {&quot;begin&quot;: 22, &quot;end&quot;: 22}
+    &quot;portRange&quot;: [
+      {&quot;beginInclusive&quot;: 22, &quot;endInclusive&quot;: 22}
     ]
   }'</code></pre>
         </div>

@@ -261,9 +261,9 @@
     <div>
       <div>
         <span class="header-title">Amazon WorkSpaces Security</span>
-        <span class="header-badge">COMPUTE</span>
+        <span class="header-badge">END-USER COMPUTING</span>
       </div>
-      <p class="header-desc">Amazon WorkSpaces is a managed Desktop-as-a-Service (DaaS) provisioning cloud-based Windows or Linux virtual desktops. A compromised WorkSpace gives an attacker a foothold inside the customer VPC with AD-joined credentials, network access to internal resources, and clipboard/drive exfiltration paths.</p>
+      <p class="header-desc"></p>
     </div>
   </div>
 </div>
@@ -275,32 +275,32 @@
           <div class="stat-label">Risk Level</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">Per-Directory</div>
+          <div class="stat-value" style="color: #4ade80;">Per-Directory / Per-WorkSpace</div>
           <div class="stat-label">Scope</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">PCoIP/DCV</div>
-          <div class="stat-label">Protocols</div>
+          <div class="stat-value" style="color: #60a5fa;">WorkSpaces Personal, WorkSpaces Pools, AD Connector, IP Access Control Groups, PCoIP/DCV Protocol</div>
+          <div class="stat-label">Key Components</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">AD Auth</div>
+          <div class="stat-value" style="color: #c084fc;">Active Directory (AWS Managed Microsoft AD, AD Connector, Simple AD)</div>
           <div class="stat-label">Authentication</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #f87171;">RADIUS-based MFA via AD Connector or AWS Managed Microsoft AD</div>
+          <div class="stat-label">MFA Support</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: #4ade80;">PCoIP, DCV (WSP)</div>
+          <div class="stat-label">Streaming Protocols</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#f59e0b;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
-        <div>
-          <h4 style="color: #f59e0b;">Virtual Desktop Environment</h4>
-          <p>Each WorkSpace is associated with a directory (AWS Managed Microsoft AD, AD Connector, or Simple AD) and runs inside a customer VPC. Supports clipboard redirection, drive redirection, USB redirection, and local printing.</p>
-          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> WorkSpaces are full virtual desktops with persistent storage. A compromised WorkSpace gives a foothold inside the VPC with AD credentials, often overlooked in security monitoring.</div>
-        </div>
-        <div>
-          <h4 style="color: #f59e0b;">Authentication and Access</h4>
-          <p>The directory backing WorkSpaces is the single authentication plane. Clients connect via native apps or web browser. Without IP access control groups and MFA, WorkSpaces can be accessed from any IP with valid AD credentials.</p>
-          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Compromising the directory grants access to all WorkSpaces. Without RADIUS MFA, stolen AD credentials alone provide full desktop access.</div>
-        </div></div></div>
+<div class="section"><h2><span style="color:#f59e0b;">📋</span> Service Overview</h2><div class="overview-grid">
+        <div><p>Amazon WorkSpaces is a managed Desktop-as-a-Service (DaaS) that provisions cloud-based Windows or Linux virtual desktops. Each WorkSpace is associated with a directory (AWS Managed Microsoft AD, AD Connector, or Simple AD) and runs inside a customer VPC on dedicated compute.</p><p>WorkSpaces supports two streaming protocols: PCoIP and DCV (formerly WSP). Clients connect via native apps (Windows, macOS, Linux, iOS, Android) or a web browser. Features include clipboard redirection, drive redirection, USB redirection, and local printing.</p><div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> WorkSpaces are full virtual desktops with persistent storage. A compromised WorkSpace gives an attacker a foothold inside the customer VPC with AD-joined credentials, network access to internal resources, and potential clipboard/drive exfiltration paths. WorkSpaces are often overlooked in security monitoring because they sit outside traditional EC2-based detection.</div><div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> The directory backing WorkSpaces (AD Connector or AWS Managed Microsoft AD) is the single authentication plane. Compromising it grants access to all WorkSpaces in the directory, and potentially to on-premises AD via trust relationships.</div><p>---</p></div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,153 +315,180 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">WorkSpaces provide full desktop environments inside the VPC with AD credentials. Clipboard and drive redirection create data exfiltration channels. Without IP access control groups and MFA, WorkSpaces can be accessed from any IP. WorkSpaces run on managed compute not visible in EC2 console.</p>
+  <p class="risk-desc">WorkSpaces provide full desktop environments inside the VPC with Active Directory credentials. Clipboard and drive redirection create data exfiltration channels. Without IP access control groups and MFA, WorkSpaces can be accessed from any IP with valid AD credentials. WorkSpaces run on AWS-managed compute that is not visible in the EC2 console, creating monitoring blind spots.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Initial Access &amp; Credential Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Credential stuffing against Active Directory</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> No MFA enforcement (RADIUS not configured by default)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> No IP access control (accepts all public IPs)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Phishing for WorkSpace registration codes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> WorkSpaces Web access abuse from unmanaged devices</li></ul><h4 style="color: #f87171;">Post-Compromise &amp; Lateral Movement</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> VPC network pivoting from compromised WorkSpace</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Clipboard exfiltration (two-way, enabled by default)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Drive redirection data theft to local filesystem</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> AD credential harvesting (Mimikatz, Rubeus)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Persistence via D: drive survives rebuilds</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Initial Access &amp; Credential Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Credential stuffing against AD</strong> -- WorkSpaces authenticate against Active Directory; compromised or sprayed AD credentials grant full desktop access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>No MFA enforcement</strong> -- Without RADIUS MFA configured, stolen AD credentials alone provide WorkSpace access from any location</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>No IP access control</strong> -- Without IP access control groups, WorkSpaces accept connections from any public IP, expanding the attack surface</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Phishing for WorkSpace registration codes</strong> -- Registration codes (directory identifiers) combined with AD credentials enable unauthorized access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>WorkSpaces Web (browser access) abuse</strong> -- If Web Access is enabled, attackers can connect from unmanaged devices without client software</li></ul><h4 style="color: #f87171;">Post-Compromise &amp; Lateral Movement</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>VPC network pivoting</strong> -- A compromised WorkSpace has a network interface in the customer VPC; attacker can scan and reach internal resources (databases, APIs, other WorkSpaces)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Clipboard exfiltration</strong> -- Two-way clipboard redirection (enabled by default) allows copying sensitive data from the WorkSpace to a local machine</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Drive redirection data theft</strong> -- Local drive mapping allows transferring files between the WorkSpace and the attacker's local filesystem</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>AD credential harvesting</strong> -- WorkSpaces are domain-joined; tools like Mimikatz on a compromised Windows WorkSpace can extract cached AD credentials, Kerberos tickets, or NTLM hashes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Persistence via WorkSpace rebuild resistance</strong> -- Attackers can place payloads on the D: drive (user volume); during a WorkSpace rebuild, the user volume is recreated from the most recent automatic snapshot (taken every 12 hours), so payloads captured in a snapshot will persist through rebuilds</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Access Control Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No IP access control groups configured (default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> MFA not enabled (RADIUS not configured by default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Web Access enabled without need</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive outbound security groups</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Unrestricted device types (all allowed by default)</li></ul><h4 style="color: #fb923c;">Data Protection Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Clipboard redirection left enabled (two-way default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Drive redirection not disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Root volume not encrypted (not default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No user volume backup strategy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> ALWAYS_ON running mode without justification</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Access Control Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No IP access control groups configured</strong> -- WorkSpaces accept connections from any IP address by default; no IP-based restriction is applied unless you explicitly create and associate IP access control groups</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>MFA not enabled</strong> -- RADIUS MFA is not configured by default; without it, only AD username/password is required</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Web Access enabled without need</strong> -- WorkSpaces Web Access allows browser-based connections, bypassing client-side controls; should be disabled if not required</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Overly permissive security groups</strong> -- The WorkSpaces security group allows outbound traffic to the internet, enabling command-and-control or data exfiltration</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Unrestricted device types</strong> -- By default, all client device types (Windows, macOS, iOS, Android, Linux, Web) are allowed; restricting to managed devices reduces risk</li></ul><h4 style="color: #fb923c;">Configuration &amp; Data Protection Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Clipboard redirection left enabled</strong> -- Two-way clipboard redirection is on by default; this is a data exfiltration vector</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Drive redirection not disabled</strong> -- Local drive mapping is enabled by default, allowing file transfers between WorkSpace and local machine</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Root volume not encrypted</strong> -- WorkSpace volumes can be encrypted with AWS KMS, but encryption is not enabled by default</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No user volume backup strategy</strong> -- D: drive (user volume) data is not automatically backed up to S3; relying solely on WorkSpace snapshots</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Running mode set to ALWAYS_ON without justification</strong> -- Unnecessary ALWAYS_ON WorkSpaces increase cost and attack window; AUTO_STOP reduces exposure during idle periods</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
-          <div class="cmd-title">List All WorkSpaces</div>
-          <pre><code>aws workspaces describe-workspaces</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Registered Directories</div>
-          <pre><code>aws workspaces describe-workspace-directories</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check Connection Status</div>
-          <pre><code>aws workspaces describe-workspaces-connection-status</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List IP Access Control Groups</div>
-          <pre><code>aws workspaces describe-ip-groups</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List WorkSpaces Pools</div>
-          <pre><code>aws workspaces describe-workspaces-pools</code></pre>
-        </div></div>
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><h4 style="color: #22d3ee;">List all WorkSpaces</h4><pre><code>aws workspaces describe-workspaces</code></pre><h4 style="color: #22d3ee;">List registered directories</h4><pre><code>aws workspaces describe-workspace-directories</code></pre><h4 style="color: #22d3ee;">Check WorkSpace connection status</h4><pre><code>aws workspaces describe-workspaces-connection-status</code></pre><h4 style="color: #22d3ee;">List available bundles</h4><pre><code>aws workspaces describe-workspace-bundles --owner AMAZON</code></pre><h4 style="color: #22d3ee;">List IP access control groups</h4><pre><code>aws workspaces describe-ip-groups</code></pre><h4 style="color: #22d3ee;">Check workspace access properties (allowed device types)</h4><pre><code>aws workspaces describe-workspace-directories --query &quot;Directories[*].{DirectoryId:DirectoryId,DeviceTypeWindows:WorkspaceAccessProperties.DeviceTypeWindows,DeviceTypeMacOs:WorkspaceAccessProperties.DeviceTypeMacOs,DeviceTypeWeb:WorkspaceAccessProperties.DeviceTypeWeb}&quot;</code></pre><h4 style="color: #22d3ee;">List WorkSpaces Pools</h4><pre><code>aws workspaces describe-workspaces-pools</code></pre><h4 style="color: #22d3ee;">Describe connection aliases (custom access URLs)</h4><pre><code>aws workspaces describe-connection-aliases</code></pre><p>---</p></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">IAM-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateWorkspaces with AD admin credentials for VPC foothold</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyWorkspaceProperties to upgrade compute resources</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyWorkspaceCreationProperties to weaken security</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyWorkspaceAccessProperties to re-enable device types</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> RebuildWorkspaces abuse (user volume persistence)</li></ul><h4 style="color: #c084fc;">AD-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Compromised Windows WorkSpace runs AD attack tools</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> BloodHound, Rubeus, Mimikatz against the domain</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Escalate from single desktop to domain admin</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Kerberoasting from WorkSpace for service tickets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pass-the-hash from cached AD credentials</li></ul></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">WorkSpace-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Place payloads on D: drive (survives rebuild snapshots)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Scheduled tasks for persistent execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Startup scripts on user profile</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain AD credential cache for re-access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Registry modifications for auto-run</li></ul><h4 style="color: #facc15;">Infrastructure-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional WorkSpaces as backup access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain clipboard/drive exfiltration channels</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify security groups for persistent network access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Keep VPC-level access for lateral movement</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Abuse AUTO_STOP mode timing for stealth</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateWorkspaces - new WorkSpace created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> TerminateWorkspaces - WorkSpace terminated</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyWorkspaceProperties - properties changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyWorkspaceAccessProperties - access changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RebuildWorkspaces - WorkSpace rebuilt</li></ul><h4 style="color: #4ade80;">Behavioral Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Connections from unexpected IP addresses</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Multiple failed AD authentication attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual connection patterns or times</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> VPC flow logs showing lateral movement</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Clipboard/drive transfer anomalies</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Create Rogue WorkSpace</div>
-          <pre><code>aws workspaces create-workspaces \
-  --workspaces DirectoryId=d-1234567890,UserName=attacker,BundleId=wsb-XXXXX</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Re-enable Web Access</div>
-          <pre><code>aws workspaces modify-workspace-access-properties \
-  --resource-id d-1234567890 \
-  --workspace-access-properties DeviceTypeWeb=ALLOW</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Rebuild WorkSpace (Preserves User Volume)</div>
-          <pre><code>aws workspaces rebuild-workspaces \
-  --rebuild-workspace-requests WorkspaceId=ws-abc123def</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Modify Running Mode</div>
-          <pre><code>aws workspaces modify-workspace-properties \
-  --workspace-id ws-abc123def \
-  --workspace-properties RunningMode=ALWAYS_ON</code></pre>
-        </div></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:CreateWorkspaces with AD admin credentials</strong> -- An attacker with this IAM permission can create new WorkSpaces joined to the directory, gaining a domain-joined desktop in the target VPC</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:ModifyWorkspaceProperties</strong> -- Change running mode, compute type, or protocol; can be used to upgrade a WorkSpace to a larger instance for resource-intensive attacks</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:ModifyWorkspaceCreationProperties</strong> -- Modify default internet access, custom security group, or default OU for new WorkSpaces; can weaken security posture for future WorkSpaces</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:ModifyClientProperties</strong> -- Re-enable reconnect capability, changing session behavior</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:ModifyWorkspaceAccessProperties</strong> -- Re-enable device types (e.g., enable Web Access) that were previously restricted</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>AD-level escalation from WorkSpace</strong> -- A compromised Windows WorkSpace with local admin can run AD enumeration and attack tools (BloodHound, Rubeus, Mimikatz) against the domain, escalating from a single desktop to domain admin</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>workspaces:RebuildWorkspaces abuse</strong> -- Rebuilding a WorkSpace resets the root volume but preserves user volume; if attacker placed persistence on user volume, the rebuild does not remove it</li></ul><p>---</p></div>
+      <div class="panel" style="border-color: #f59e0b33;">
+        <h3 style="color: #f59e0b;">Sources</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f59e0b55;color:#f59e0b;">Claim</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f59e0b55;color:#f59e0b;">Source URL</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f59e0b55;color:#f59e0b;">Verified</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">WorkSpaces CLI commands (describe-workspaces, describe-workspace-directories, etc.)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/index.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">IP access control groups filter by source CIDR</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/amazon-workspaces-ip-access-control-groups.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">MFA requires RADIUS via AD Connector or AWS Managed Microsoft AD</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/whitepapers/latest/best-practices-deploying-amazon-workspaces/security.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Clipboard redirection enabled by default, max 20 MB uncompressed</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/group_policy.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Group Policy controls clipboard and drive redirection for Windows WorkSpaces</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/group_policy.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DCV configuration for Linux clipboard settings</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/manage_linux_workspace.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">WorkSpaces Web Access limitations</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/web-access.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">IAM actions for WorkSpaces (CreateWorkspaces, DescribeWorkspaces, etc.)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonworkspaces.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">WorkSpaces security overview</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/adminguide/security.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">WorkSpaces best practices for security</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/whitepapers/latest/best-practices-deploying-amazon-workspaces/security.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">AD Connector role with WorkSpaces, RADIUS MFA multi-server</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/whitepapers/latest/best-practices-deploying-amazon-workspaces/ad-connector-role-with-workspaces.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">modify-workspace-access-properties CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/modify-workspace-access-properties.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">modify-workspace-properties CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/modify-workspace-properties.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">create-ip-group CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/create-ip-group.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">associate-ip-groups CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/associate-ip-groups.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">describe-ip-groups CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/describe-ip-groups.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">describe-workspaces-connection-status CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/describe-workspaces-connection-status.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">describe-workspace-bundles CLI</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/describe-workspace-bundles.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">USB redirection support on PCoIP and DCV</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/workspaces/latest/userguide/usb-redirection.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Rebuild resets root volume (C:) but preserves user volume (D:)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/workspaces/rebuild-workspaces.html</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2026-03-30</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CVE-2021-38112: WorkSpaces client RCE</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://rhinosecuritylabs.com/aws/cve-2021-38112-aws-workspaces-rce/</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">NEEDS VERIFICATION</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">WorkSpaces Linux token extraction vulnerability</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://cybersecuritynews.com/amazon-workspaces-linux-vulnerability/</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">NEEDS VERIFICATION</td></tr></table></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full WorkSpaces Admin</span>
+            <span style="color: #f87171; font-weight: 600;">BAD -- Overly permissive WorkSpaces admin</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;workspaces:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;workspaces:*&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Full control including creating rogue WorkSpaces, disabling security controls, and terminating legitimate ones</p>
+          <p class="policy-desc"><strong>Why it is bad:</strong> Grants full WorkSpaces control including creating, terminating, modifying, and rebuilding any WorkSpace. An attacker with these permissions can create rogue WorkSpaces, disable security controls, or terminate legitimate ones.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
+            <span style="color: #4ade80; font-weight: 600;">GOOD -- Least-privilege read-only for monitoring</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;workspaces:DescribeWorkspaces&quot;,
-    &quot;workspaces:DescribeWorkspaceDirectories&quot;,
-    &quot;workspaces:DescribeIpGroups&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;workspaces:DescribeWorkspaces&quot;,
+        &quot;workspaces:DescribeWorkspaceDirectories&quot;,
+        &quot;workspaces:DescribeWorkspaceBundles&quot;,
+        &quot;workspaces:DescribeWorkspacesConnectionStatus&quot;,
+        &quot;workspaces:DescribeIpGroups&quot;,
+        &quot;workspaces:DescribeWorkspacesPoolSessions&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Read-only access for monitoring and auditing. Cannot create, modify, or terminate WorkSpaces.</p>
+          <p class="policy-desc"><strong>Why it is good:</strong> Read-only access for monitoring and auditing. Cannot create, modify, or terminate WorkSpaces.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">GOOD -- Scoped WorkSpaces admin with directory restriction</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;workspaces:CreateWorkspaces&quot;,
+        &quot;workspaces:TerminateWorkspaces&quot;,
+        &quot;workspaces:RebuildWorkspaces&quot;,
+        &quot;workspaces:StartWorkspaces&quot;,
+        &quot;workspaces:StopWorkspaces&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;,
+      &quot;Condition&quot;: {
+        &quot;StringEquals&quot;: {
+          &quot;aws:ResourceTag/DirectoryId&quot;: &quot;d-1234567890&quot;
+        }
+      }
+    }
+  ]
+}</code></pre>
+          <p class="policy-desc"><strong>Why it is good:</strong> Restricts WorkSpace lifecycle actions to resources tagged with a specific directory ID, preventing cross-directory abuse. Note: the only WorkSpaces-specific condition key is <code>workspaces:userId</code>; directory-level scoping requires tag-based conditions or resource ARN restrictions.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F310;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enforce IP Access Control Groups</h4>
-              <p>Restrict WorkSpace access to known corporate IP ranges or VPN egress IPs.</p>
-              <pre><code>aws workspaces create-ip-group \
+              <p>Create IP access control groups to restrict WorkSpace access to known corporate IP ranges or VPN egress IPs. Associate the group with each directory.</p>
+              <pre><code># Create an IP access control group
+aws workspaces create-ip-group \
   --group-name &quot;CorporateVPN&quot; \
-  --user-rules &quot;ipRule=203.0.113.0/24,ruleDesc=Corp VPN&quot;</code></pre>
+  --group-desc &quot;Allow access from corporate VPN only&quot; \
+  --user-rules &quot;ipRule=203.0.113.0/24,ruleDesc=Corporate VPN&quot;
+
+# Associate the group with a directory
+aws workspaces associate-ip-groups \
+  --directory-id d-1234567890 \
+  --group-ids wsipg-abcdef123</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable RADIUS MFA</h4>
-              <p>Configure RADIUS-based multi-factor authentication on the directory for all WorkSpace logins.</p>
+              <p>Configure RADIUS-based multi-factor authentication on the directory. Use multiple RADIUS server IPs for redundancy.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Disable Clipboard and Drive Redirection</h4>
-              <p>Use Group Policy (Windows) or DCV config (Linux) to disable or restrict clipboard and drive redirection.</p>
+              <p>For Windows WorkSpaces, use Group Policy to disable or restrict clipboard redirection direction. For Linux WorkSpaces, modify the DCV configuration file. This closes a primary data exfiltration channel.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4F1;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Restrict Device Types</h4>
-              <p>Disable unnecessary device types (especially Web Access).</p>
+              <p>Disable unnecessary device types (especially Web Access) via <code>modify-workspace-access-properties</code>:</p>
               <pre><code>aws workspaces modify-workspace-access-properties \
   --resource-id d-1234567890 \
-  --workspace-access-properties DeviceTypeWeb=DENY,DeviceTypeIos=DENY</code></pre>
+  --workspace-access-properties \
+    DeviceTypeWindows=ALLOW,DeviceTypeOsx=ALLOW,DeviceTypeWeb=DENY,DeviceTypeIos=DENY,DeviceTypeAndroid=DENY,DeviceTypeLinux=DENY</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Encryption at Rest</h4>
-              <p>Encrypt both root and user volumes with KMS at creation time (cannot be enabled later).</p>
+              <p>Encrypt both root and user volumes with AWS KMS when creating WorkSpaces. Encryption must be set at creation time and cannot be enabled later.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x23F0;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Use AUTO_STOP Running Mode</h4>
-              <p>Reduce attack window during idle periods.</p>
+              <p>Set WorkSpaces to AUTO_STOP to reduce the attack window during idle periods and reduce cost:</p>
               <pre><code>aws workspaces modify-workspace-properties \
-  --workspace-id ws-abc123 \
+  --workspace-id ws-abc123def \
   --workspace-properties RunningMode=AUTO_STOP,RunningModeAutoStopTimeoutInMinutes=60</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Monitor with CloudTrail and VPC Flow Logs</h4>
+              <p>- Enable CloudTrail logging for all <code>workspaces:*</code> API calls - Enable VPC Flow Logs on the WorkSpaces subnets to detect lateral movement - Monitor <code>WorkSpaces</code> CloudWatch metrics for unusual connection patterns (e.g., connections from unexpected regions)</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Restrict Outbound Network Access</h4>
+              <p>Apply restrictive security groups and NACLs to WorkSpaces subnets. Block direct internet access; route traffic through a proxy or NAT Gateway with URL filtering.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon WorkSpaces Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>Amazon WorkSpaces Security Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

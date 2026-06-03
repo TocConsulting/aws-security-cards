@@ -514,10 +514,13 @@ curl $AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
             <span class="defense-icon">🚫</span>
             <div>
               <h4>Require IMDSv2</h4>
-              <p>Configure compute environments to require IMDSv2, preventing simple credential theft.</p>
-              <pre><code>aws batch update-compute-environment \\
-  --compute-environment prod-env \\
-  --compute-resources 'ec2Configuration=[{imageIdOverride=ami-xxx}]'</code></pre>
+              <p>Enforce IMDSv2 through the launch template referenced by the compute environment (HttpTokens=required). The ec2Configuration AMI override alone does NOT enforce IMDSv2.</p>
+              <pre><code>aws ec2 create-launch-template \\
+  --launch-template-name batch-imdsv2 \\
+  --launch-template-data \\
+  '{&quot;MetadataOptions&quot;:{&quot;HttpTokens&quot;:&quot;required&quot;,&quot;HttpPutResponseHopLimit&quot;:1}}'
+# Then set computeResources.launchTemplate to batch-imdsv2
+# in the Batch compute environment</code></pre>
             </div>
           </div>
         </div>

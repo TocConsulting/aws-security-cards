@@ -288,19 +288,27 @@
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#06b6d4;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #06b6d4;">HSM Clusters &amp; Instances</h4>
-          <p>CloudHSM clusters contain one or more HSM instances distributed across Availability Zones within a VPC. Each HSM gets an Elastic Network Interface (ENI) in your subnet. Clients connect via ports 2223-2225.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Compromising the cluster security group or gaining network access to the HSM ENIs allows direct interaction with HSM instances. Overly permissive security groups are the most common network-level misconfiguration.</div>
-        </div>
-        <div>
-          <h4 style="color: #06b6d4;">HSM User Model (Admin / CU / AU)</h4>
-          <p>CloudHSM has its own user model separate from IAM. Three user types: Admin (manages users), Crypto User (creates/uses keys), and Appliance User (AWS-managed sync). The default admin account is named &quot;admin&quot;.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> HSM user credentials are managed outside of IAM -- if an attacker obtains the admin or CU password, IAM policies cannot prevent HSM-level operations. Credential theft is the highest-impact vector.</div>
+          <p>CloudHSM clusters contain one or more HSM instances distributed across Availability Zones within a VPC. Each HSM gets an Elastic Network Interface (ENI) in your subnet. Clients connect to HSMs through these ENIs over ports 2223-2225. AWS automatically creates a security group (<code>cloudhsm-cluster-&lt;clusterID&gt;-sg</code>) controlling network access.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Compromising the cluster security group or gaining network access to the HSM ENIs allows direct interaction with HSM instances. Overly permissive security groups that allow inbound access beyond the client instances are the most common network-level misconfiguration.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">HSM User Model (Admin / Crypto User / Appliance User)</h4>
+          <p>CloudHSM has its own user model separate from IAM. After cluster activation, there are three user types: <strong>Admin</strong> (manages users, passwords, quorum settings), <strong>Crypto User (CU)</strong> (creates/uses/shares/exports keys, performs crypto operations), and <strong>Appliance User (AU)</strong> (AWS-managed, handles HSM synchronization). The default admin account is named <code>admin</code>.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> HSM user credentials are managed outside of IAM — if an attacker obtains the admin or CU password, IAM policies cannot prevent HSM-level operations. Credential theft is the highest-impact vector.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">Backups</h4>
+          <p>CloudHSM automatically creates encrypted backups of cluster state. Backups are encrypted inside the HSM using an ephemeral backup key (EBK) wrapped by a persistent backup key (PBK) — both AES-256. Backups can be copied cross-region. A restored backup contains all users, keys, and configuration from the original HSM.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> An attacker with <code>cloudhsm:CopyBackupToRegion</code> and <code>cloudhsm:RestoreBackup</code> permissions can copy a backup to an attacker-controlled region and restore it to a new cluster, gaining access to all keys if they possess the HSM user credentials.</div>
+        </div><div>
+          <h4 style="color: #06b6d4;">KMS Custom Key Store Integration</h4>
+          <p>CloudHSM clusters can back AWS KMS custom key stores. KMS creates a dedicated CU account (<code>kmsuser</code>) on the HSM and performs all cryptographic operations through the HSM. Key material never leaves the HSM unencrypted.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> If an attacker disconnects the custom key store and logs in as <code>kmsuser</code>, they can directly access and use all KMS-backed keys on the HSM, bypassing KMS key policies entirely.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,179 +323,225 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">CloudHSM has strong cryptographic protections -- key material never leaves the HSM unencrypted. However, risk is HIGH because HSM user credentials exist outside IAM, the IAM control plane allows cluster destruction and backup exfiltration, and quorum authentication is not enabled by default.</p>
+  <p class="risk-desc">CloudHSM has strong cryptographic protections — key material never leaves the HSM unencrypted, and AWS cannot access customer keys. However, the risk is HIGH because: (1) HSM user credentials exist outside IAM and are not protected by MFA or session policies by default, (2) the IAM control plane allows cluster destruction and backup exfiltration, (3) network access to ENIs enables direct HSM interaction, and (4) quorum authentication is not enabled by default, meaning a single compromised admin can perform all user management operations.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Credential &amp; Authentication Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> HSM admin credential theft from configs/env vars</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Crypto User password compromise for key operations</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Weak admin password (no complexity enforced)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> kmsuser credential extraction from custom key store</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Brute-force HSM login (lockout after 5 attempts)</li></ul><h4 style="color: #f87171;">IAM Control-Plane Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cluster deletion via DeleteCluster/DeleteHsm</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Backup exfiltration via CopyBackupToRegion</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Backup deletion via DeleteBackup</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> HSM addition to attacker subnet via CreateHsm</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Resource policy manipulation via PutResourcePolicy</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential &amp; Authentication Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>HSM admin credential theft</strong> — Extracting the admin password from application configs, environment variables, or EC2 instance metadata to gain full user management control on the HSM</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Crypto User password compromise</strong> — Obtaining CU credentials to perform key operations (encrypt, decrypt, sign, export) without any IAM-level control</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Weak admin password</strong> — The admin password set during cluster activation may be weak; there is no complexity requirement enforced by CloudHSM, and passwords are not subject to automatic rotation</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>kmsuser credential extraction</strong> — Disconnecting a KMS custom key store and logging in as <code>kmsuser</code> to directly access KMS-backed keys on the HSM</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Brute-force HSM login</strong> — Attempting repeated authentication against the HSM user accounts (CloudHSM locks accounts after 5 failed login attempts; however, in multi-HSM clusters, load balancing across HSMs may allow more attempts before lockout)</li></ul><h4 style="color: #f87171;">IAM Control-Plane Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Cluster deletion</strong> — An attacker with <code>cloudhsm:DeleteCluster</code> and <code>cloudhsm:DeleteHsm</code> can destroy the entire cluster, causing a denial-of-service for all dependent cryptographic operations</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Backup exfiltration</strong> — Using <code>cloudhsm:CopyBackupToRegion</code> to copy backups to an attacker-controlled region, then restoring them in a new cluster</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Backup deletion</strong> — Using <code>cloudhsm:DeleteBackup</code> to destroy backups, preventing disaster recovery</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>HSM addition to attacker subnet</strong> — Using <code>cloudhsm:CreateHsm</code> to add an HSM in an attacker-accessible subnet, then connecting to it</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Resource policy manipulation</strong> — Using <code>cloudhsm:PutResourcePolicy</code> to grant cross-account access to cluster resources</li></ul><h4 style="color: #f87171;">Network-Level Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Security group modification</strong> — Widening the <code>cloudhsm-cluster-*-sg</code> security group to allow inbound access from unauthorized hosts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>ENI-level traffic interception</strong> — Gaining access to the VPC subnet where HSM ENIs reside to interact directly with HSMs on ports 2223-2225</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>VPC peering exploitation</strong> — Accessing HSM ENIs through misconfigured VPC peering connections</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> <strong>Client instance compromise</strong> — Compromising an EC2 instance in the cluster security group to leverage its network access to HSMs</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Cluster &amp; Network</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Single-AZ deployment (no high availability)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive security group on HSM ENIs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> HSM in public subnet instead of private</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Modified cluster security group TCP rules</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC Flow Logs on HSM subnets</li></ul><h4 style="color: #fb923c;">User &amp; Key Management</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Quorum authentication not enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> HSM credentials stored in plaintext</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No key sharing restrictions between CUs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> HSM user passwords not rotated</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Wildcard IAM policies (cloudhsm:*)</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Cluster &amp; Network Misconfigurations</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Single-AZ deployment</strong> — Running a cluster with only one HSM provides no high availability; AWS strongly recommends at least two HSMs in separate AZs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Overly permissive security group</strong> — Adding broad CIDR ranges or 0.0.0.0/0 to the CloudHSM cluster security group, allowing unauthorized network access to HSM ENIs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>HSM in public subnet</strong> — Placing HSM ENIs in public subnets instead of private subnets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Modifying the cluster security group rules</strong> — Deleting or changing the preconfigured TCP rules (ports 2223-2225) on the cluster security group can break HSM connectivity or open unintended access</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No VPC Flow Logs on HSM subnets</strong> — Failing to enable VPC Flow Logs on subnets containing HSM ENIs, making network-level attack detection impossible</li></ul><h4 style="color: #fb923c;">User &amp; Key Management Misconfigurations</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Quorum authentication not enabled</strong> — By default, a single admin can create/delete users and change passwords without requiring approval from additional admins</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>HSM credentials stored in plaintext</strong> — Storing admin or CU passwords in application config files, environment variables, or source code instead of using AWS Secrets Manager or a secure retrieval mechanism</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>No key sharing restrictions</strong> — Allowing crypto users to share keys with all other CUs without restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Not rotating HSM user passwords</strong> — HSM user passwords are not subject to automatic rotation; they remain unchanged unless manually rotated</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> <strong>Wildcard IAM policies for CloudHSM</strong> — Granting <code>cloudhsm:*</code> to IAM principals, which allows cluster destruction, backup manipulation, and resource policy changes</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All CloudHSM Clusters</div>
           <pre><code>aws cloudhsmv2 describe-clusters</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Describe a Specific Cluster</div>
-          <pre><code>aws cloudhsmv2 describe-clusters \
-  --filters clusterIds=cluster-1234abcd5678</code></pre>
+          <pre><code>aws cloudhsmv2 describe-clusters --filters clusterIds=cluster-1234abcd5678</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">List All Backups</div>
           <pre><code>aws cloudhsmv2 describe-backups</code></pre>
         </div><div class="cmd-block">
+          <div class="cmd-title">List Backups for a Specific Cluster</div>
+          <pre><code>aws cloudhsmv2 describe-backups --filters clusterIds=cluster-1234abcd5678</code></pre>
+        </div><div class="cmd-block">
           <div class="cmd-title">List Tags on a Cluster</div>
-          <pre><code>aws cloudhsmv2 list-tags \
-  --resource-id cluster-1234abcd5678</code></pre>
+          <pre><code>aws cloudhsmv2 list-tags --resource-id cluster-1234abcd5678</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Get Resource Policy on a Backup</div>
-          <pre><code>aws cloudhsmv2 get-resource-policy \
-  --resource-arn arn:aws:cloudhsm:us-east-1:123456789012:backup/backup-1234abcd5678</code></pre>
+          <pre><code>aws cloudhsmv2 get-resource-policy --resource-arn arn:aws:cloudhsm:us-east-1:123456789012:backup/backup-1234abcd5678</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">IAM-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateCluster + CreateHsm + InitializeCluster from stolen backup</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> RestoreBackup + CreateCluster to recover key material</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PutResourcePolicy for cross-account backup access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CopyBackupToRegion to region with more permissive IAM</li></ul><h4 style="color: #c084fc;">HSM-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Admin resets CU password to access their keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CU key sharing abuse for lateral access</li></ul><div class="note"><strong>Key insight:</strong> Attacker still needs HSM user credentials to log in and use keys. Backups are encrypted and can only be restored to AWS-owned HSMs.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Backup-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Copy backups to attacker-controlled region</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Restore backups to new cluster with known credentials</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional HSM in attacker-accessible subnet</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> PutResourcePolicy granting cross-account access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain HSM user credentials for persistent access</li></ul><h4 style="color: #facc15;">Destruction Scenarios</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete all backups to prevent recovery</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete HSMs and cluster for denial of service</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disconnect KMS custom key store</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Reset admin password to lock out legitimate users</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteCluster / DeleteHsm - cluster destruction</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteBackup - backup removal</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CopyBackupToRegion - backup exfiltration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutResourcePolicy - cross-account access granted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateHsm - new HSM added</li></ul><h4 style="color: #4ade80;">HSM Audit Logs (CloudWatch)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed login attempts to HSM user accounts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> User creation/deletion operations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Key export operations</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Password change events</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Quorum authentication changes</li></ul></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">IAM-Level Escalation Paths</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>cloudhsm:CreateCluster + cloudhsm:CreateHsm + cloudhsm:InitializeCluster</strong> — Create a new cluster from a stolen backup, initialize it, and gain admin access to all keys in the backup</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>cloudhsm:RestoreBackup + cloudhsm:CreateCluster</strong> — Restore a deleted backup and create a new cluster from it, recovering access to all key material</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>cloudhsm:PutResourcePolicy</strong> — Attach a resource policy granting cross-account access to backups, enabling backup exfiltration from another account</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>cloudhsm:CopyBackupToRegion</strong> — Copy a backup to a region where the attacker has more permissive IAM access</li></ul><h4 style="color: #c084fc;">HSM-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>Admin to Crypto User key access</strong> — An admin cannot directly use keys, but can reset any CU password, then log in as that CU to access their keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <strong>CU key sharing abuse</strong> — A CU can share their keys with other CUs; a compromised CU account gains access to all keys shared with it</li></ul><h4 style="color: #c084fc;">Exploitation Example: Backup-Based Key Recovery</h4><pre><code># Step 1: List available backups
+aws cloudhsmv2 describe-backups --query &quot;Backups[*].{ID:BackupId,ClusterId:ClusterId,State:BackupState}&quot;
 
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Copy Backup to Attacker Region</div>
-          <pre><code>aws cloudhsmv2 copy-backup-to-region \
-  --destination-region eu-west-1 \
-  --backup-id backup-1234abcd5678</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Create New Cluster from Stolen Backup</div>
-          <pre><code>aws cloudhsmv2 create-cluster \
-  --hsm-type hsm2m.medium \
-  --subnet-ids subnet-abcdef12 \
-  --source-backup-id backup-1234abcd5678</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Add HSM to New Cluster</div>
-          <pre><code>aws cloudhsmv2 create-hsm \
-  --cluster-id cluster-newcluster \
-  --availability-zone eu-west-1a</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Delete Backup (Destruction)</div>
-          <pre><code>aws cloudhsmv2 delete-backup \
-  --backup-id backup-1234abcd5678</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Delete HSM from Cluster</div>
-          <pre><code>aws cloudhsmv2 delete-hsm \
-  --cluster-id cluster-1234abcd5678 \
-  --hsm-id hsm-abcdef123456</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Backups for Exfiltration</div>
-          <pre><code>aws cloudhsmv2 describe-backups \
-  --query &quot;Backups[*].{ID:BackupId,ClusterId:ClusterId,State:BackupState}&quot;</code></pre>
-        </div></div></div>
+# Step 2: Copy backup to attacker-controlled region
+aws cloudhsmv2 copy-backup-to-region --destination-region eu-west-1 --backup-id backup-1234abcd5678
+
+# Step 3: Create new cluster from the copied backup
+aws cloudhsmv2 create-cluster --hsm-type hsm2m.medium --subnet-ids subnet-abcdef12 --source-backup-id backup-1234abcd5678
+
+# Step 4: Add HSM to the new cluster
+aws cloudhsmv2 create-hsm --cluster-id cluster-newcluster --availability-zone eu-west-1a</code></pre><div class="note">Note: The attacker still needs HSM user credentials to log in and use keys. Backups are encrypted and can only be restored to AWS-owned HSMs.</div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full CloudHSM Access</span>
+            <span style="color: #f87171; font-weight: 600;">Bad Policy</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;cloudhsm:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;cloudhsm:*&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Grants full control including DeleteCluster, DeleteHsm, DeleteBackup, CopyBackupToRegion, and PutResourcePolicy</p>
+          <p class="policy-desc">&gt; Why it's bad: Grants full control over all CloudHSM operations including DeleteCluster, DeleteHsm, DeleteBackup, CopyBackupToRegion, and PutResourcePolicy. An attacker with this policy can destroy clusters, exfiltrate backups cross-region, and grant cross-account access to backups.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
+            <span style="color: #4ade80; font-weight: 600;">Good Policy — Read-Only Monitoring</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;cloudhsm:DescribeClusters&quot;,
-    &quot;cloudhsm:DescribeBackups&quot;,
-    &quot;cloudhsm:ListTags&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudhsm:DescribeClusters&quot;,
+        &quot;cloudhsm:DescribeBackups&quot;,
+        &quot;cloudhsm:ListTags&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Read-only access for monitoring and inventory. Cannot modify, delete, or create resources.</p>
+          <p class="policy-desc">&gt; Why it's good: Grants only read-only access for monitoring and inventory purposes. Cannot modify, delete, or create any CloudHSM resources.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Operator (No Delete, No Export)</span>
+            <span style="color: #4ade80; font-weight: 600;">Good Policy — Operator (No Delete, No Backup Export)</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: [
-    &quot;cloudhsm:DeleteCluster&quot;,
-    &quot;cloudhsm:DeleteHsm&quot;,
-    &quot;cloudhsm:DeleteBackup&quot;,
-    &quot;cloudhsm:CopyBackupToRegion&quot;,
-    &quot;cloudhsm:PutResourcePolicy&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudhsm:DescribeClusters&quot;,
+        &quot;cloudhsm:DescribeBackups&quot;,
+        &quot;cloudhsm:ListTags&quot;,
+        &quot;cloudhsm:CreateHsm&quot;,
+        &quot;cloudhsm:TagResource&quot;,
+        &quot;cloudhsm:UntagResource&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudhsm:DeleteCluster&quot;,
+        &quot;cloudhsm:DeleteHsm&quot;,
+        &quot;cloudhsm:DeleteBackup&quot;,
+        &quot;cloudhsm:CopyBackupToRegion&quot;,
+        &quot;cloudhsm:PutResourcePolicy&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Explicitly denies destructive actions and exfiltration vectors</p>
+          <p class="policy-desc">&gt; Why it's good: Allows day-to-day operations (adding HSMs, tagging) while explicitly denying destructive actions (deletion) and exfiltration vectors (cross-region backup copy, resource policy changes).</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Quorum Authentication (M-of-N)</h4>
-              <p>Require multiple admins to approve sensitive operations like user creation, deletion, and password changes.</p>
+              <p>Require multiple admins to approve sensitive operations like user creation, deletion, and password changes. This prevents a single compromised admin from taking over the HSM. &gt; Reference: https://docs.aws.amazon.com/cloudhsm/latest/userguide/quorum-auth-chsm-cli.html</p>
+              <pre><code># Using CloudHSM CLI: set quorum for admin user management operations
+# (requires logging into the HSM as admin)
+# cloudhsm-cli&gt; quorum token-sign set-quorum-value --service user --value 2</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F310;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Deploy Multi-AZ Clusters</h4>
-              <p>Always run at least two HSMs in separate Availability Zones for high availability.</p>
-              <pre><code>aws cloudhsmv2 create-hsm --cluster-id cluster-1234abcd5678 --availability-zone us-east-1b</code></pre>
+              <p>Always run at least two HSMs in separate Availability Zones for high availability and resilience against AZ failures.</p>
+              <pre><code># Add HSM in a second AZ
+aws cloudhsmv2 create-hsm --cluster-id cluster-1234abcd5678 --availability-zone us-east-1b</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6E1;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Restrict CloudHSM Security Group</h4>
-              <p>Ensure the cluster security group only allows inbound traffic from authorized client instances.</p>
-              <pre><code>aws ec2 describe-security-groups --group-ids sg-cloudhsmclustersg --query &quot;SecurityGroups[*].IpPermissions&quot;</code></pre>
+              <p>Ensure the cluster security group only allows inbound traffic from authorized client instances. Never add broad CIDR ranges.</p>
+              <pre><code># Verify the cluster security group rules
+aws ec2 describe-security-groups --group-ids sg-cloudhsmclustersg --query &quot;SecurityGroups[*].IpPermissions&quot;</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable CloudTrail + HSM Audit Logs</h4>
-              <p>Monitor all CloudHSM API calls via CloudTrail and HSM-level audit logs via CloudWatch Logs.</p>
-              <pre><code>aws logs describe-log-groups --log-group-name-prefix /aws/cloudhsm</code></pre>
+              <h4>Enable CloudTrail Logging for Control-Plane Operations</h4>
+              <p>Monitor all CloudHSM API calls (CreateHsm, DeleteHsm, DeleteCluster, CopyBackupToRegion, DeleteBackup) via CloudTrail.</p>
+              <pre><code># Search CloudTrail for destructive CloudHSM events
+aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=DeleteCluster --max-results 10</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F510;</span>
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Monitor HSM Audit Logs via CloudWatch</h4>
+              <p>CloudHSM sends HSM-level audit logs (login attempts, key operations, user management) to CloudWatch Logs. Set up metric filters and alarms for failed logins and admin operations.</p>
+              <pre><code># List CloudHSM audit log groups
+aws logs describe-log-groups --log-group-name-prefix /aws/cloudhsm</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Use EventBridge Rules for Critical Alerts</h4>
+              <p>Create EventBridge rules to alert on high-risk CloudHSM API calls.</p>
+              <pre><code># Create an EventBridge rule for DeleteHsm events
+aws events put-rule --name cloudhsm-delete-alert --event-pattern '{&quot;source&quot;:[&quot;aws.cloudhsm&quot;],&quot;detail-type&quot;:[&quot;AWS API Call via CloudTrail&quot;],&quot;detail&quot;:{&quot;eventName&quot;:[&quot;DeleteHsm&quot;,&quot;DeleteCluster&quot;,&quot;DeleteBackup&quot;,&quot;CopyBackupToRegion&quot;]}}'</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
             <div>
               <h4>Secure HSM Credentials</h4>
-              <p>Store HSM user credentials in AWS Secrets Manager with automatic rotation. Never store in plaintext.</p>
+              <p>Store HSM user credentials (admin and CU passwords) in AWS Secrets Manager with automatic rotation. Never store them in plaintext in application code, environment variables, or config files. &gt; Reference: https://docs.aws.amazon.com/cloudhsm/latest/userguide/bp-application-integration.html</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Apply SCPs to Prevent Destruction</h4>
-              <p>Use Service Control Policies to prevent unauthorized deletion of CloudHSM resources.</p>
-              <pre><code>&quot;Effect&quot;: &quot;Deny&quot;, &quot;Action&quot;: [&quot;cloudhsm:DeleteCluster&quot;, &quot;cloudhsm:DeleteHsm&quot;, &quot;cloudhsm:DeleteBackup&quot;]</code></pre>
+              <h4>Apply SCPs to Prevent Cluster Destruction</h4>
+              <p>In AWS Organizations, use Service Control Policies to prevent unauthorized deletion of CloudHSM resources.</p>
+              <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;cloudhsm:DeleteCluster&quot;,
+        &quot;cloudhsm:DeleteHsm&quot;,
+        &quot;cloudhsm:DeleteBackup&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;,
+      &quot;Condition&quot;: {
+        &quot;StringNotEquals&quot;: {
+          &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::*:root&quot;
+        }
+      }
+    }
+  ]
+}</code></pre>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS CloudHSM Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS CloudHSM Security Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

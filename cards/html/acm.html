@@ -515,7 +515,7 @@
               <p>Log all ACM and ACM-PCA API calls for audit trail.</p>
               <pre><code>aws cloudtrail put-event-selectors \\
   --trail-name main-trail \\
-  --event-selectors '[{&quot;DataResources&quot;:[{&quot;Type&quot;:&quot;AWS::ACM::Certificate&quot;}]}]'</code></pre>
+  --event-selectors '[{&quot;ReadWriteType&quot;:&quot;All&quot;,&quot;IncludeManagementEvents&quot;:true}]'</code></pre>
             </div>
           </div>
         </div>

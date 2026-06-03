@@ -263,7 +263,7 @@
         <span class="header-title">AWS Verified Access Security</span>
         <span class="header-badge">NETWORKING</span>
       </div>
-      <p class="header-desc">AWS Verified Access provides secure access to corporate applications without requiring a VPN. It evaluates each access request in real time against Cedar policies using identity and device posture data from configured trust providers. Compromising it means bypassing zero-trust enforcement entirely.</p>
+      <p class="header-desc"></p>
     </div>
   </div>
 </div>
@@ -271,7 +271,7 @@
 <!-- Stats -->
 <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-value" style="color: #f59e0b;">MEDIUM</div>
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
           <div class="stat-label">Risk Level</div>
         </div>
         <div class="stat-card">
@@ -279,28 +279,20 @@
           <div class="stat-label">Scope</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">Cedar</div>
-          <div class="stat-label">Policy Language</div>
+          <div class="stat-value" style="color: #60a5fa;">Instances, Groups, Endpoints, Trust Providers</div>
+          <div class="stat-label">Key Components</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">RBAC + ABAC</div>
-          <div class="stat-label">Auth Model</div>
+          <div class="stat-value" style="color: #c084fc;">Cedar</div>
+          <div class="stat-label">Policy Language</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#3b82f6;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
-        <div>
-          <h4 style="color: #3b82f6;">Core Components</h4>
-          <p>Verified Access Instance (top-level resource), Trust Providers (identity + device posture), Groups (collections of endpoints sharing a policy), and Endpoints (individual applications). Uses Cedar policy language.</p>
-          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> An attacker who can modify group or endpoint policies, or attach a trust provider they control, can grant themselves access to every protected application.</div>
-        </div>
-        <div>
-          <h4 style="color: #3b82f6;">Cedar Policies and Trust Providers</h4>
-          <p>Cedar policies default to implicit deny. Group-level policies are inherited by all endpoints. One identity trust provider (IAM Identity Center or OIDC) and multiple device trust providers (CrowdStrike, Jamf, JumpCloud) per instance.</p>
-          <div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> An overly broad permit statement at the group level with no endpoint-level restrictions grants access to all endpoints in that group.</div>
-        </div></div></div>
+<div class="section"><h2><span style="color:#3b82f6;">📋</span> Service Overview</h2><div class="overview-grid">
+        <div><p>AWS Verified Access provides secure access to corporate applications without requiring a VPN. It evaluates each access request in real time against access policies you define, using identity and device posture data from configured trust providers. Access is granted per-application only when security requirements (user identity, group membership, device compliance) are met.</p><h4 style="color: #3b82f6;">Core components:</h4><ul><li><span class="bullet" style="color: #3b82f6;">&#x2022;</span> <strong>Verified Access Instance</strong> — The top-level resource that ties together trust providers and groups. You attach at least one trust provider to each instance.</li><li><span class="bullet" style="color: #3b82f6;">&#x2022;</span> <strong>Trust Provider</strong> — Supplies identity or device posture data. One identity trust provider (IAM Identity Center or OIDC-compatible IdP) and multiple device trust providers (CrowdStrike, Jamf, JumpCloud) can be attached per instance.</li><li><span class="bullet" style="color: #3b82f6;">&#x2022;</span> <strong>Verified Access Group</strong> — A collection of endpoints that share an access policy. Group-level Cedar policies are inherited by all endpoints in the group.</li><li><span class="bullet" style="color: #3b82f6;">&#x2022;</span> <strong>Verified Access Endpoint</strong> — Represents a single application. Endpoint types include <code>load-balancer</code>, <code>network-interface</code>, <code>rds</code>, and <code>cidr</code>. Each endpoint belongs to one group and can optionally have its own endpoint-level Cedar policy that is evaluated in addition to the group policy.</li></ul><div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> Verified Access is a security control, so compromising it means bypassing zero-trust enforcement entirely. An attacker who can modify group or endpoint policies, or attach a trust provider they control, can grant themselves access to every protected application.</div><div class="attack-note"><span style="color:#3b82f6;">Attack note:</span> Cedar policies default to implicit deny — but an overly broad <code>permit</code> statement at the group level with no endpoint-level restrictions grants access to all endpoints in that group.</div><p>---</p></div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -321,152 +313,147 @@
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Trust Provider Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Compromise OIDC identity provider to issue valid tokens</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register a rogue device trust provider</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit misconfigured OIDC scopes or claims</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal or replay user session tokens</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target IdP admin console to add attacker users</li></ul><h4 style="color: #f87171;">Policy &amp; Config Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify group policy to blanket permit statement</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable policy on endpoint (--no-policy-enabled)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create new endpoint in permissive group</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Attach attacker-controlled trust provider</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete endpoint to force less secure fallback</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Trust Provider Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Compromise the OIDC identity provider to issue tokens that satisfy Cedar policy conditions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register a rogue device trust provider to supply fabricated device posture data</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit misconfigured OIDC scopes or claims to elevate group membership</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Steal or replay user session tokens to bypass identity verification</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target the IdP admin console to add attacker-controlled users to authorized groups</li></ul><h4 style="color: #f87171;">Policy and Configuration Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify group policy to a blanket <code>permit</code> statement, granting access to all endpoints in the group</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable the policy on an endpoint (<code>--no-policy-enabled</code>) to remove enforcement</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create a new endpoint in a permissive group pointing to a sensitive internal application</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Attach an attacker-controlled trust provider to the Verified Access instance</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete the Verified Access endpoint for an application, forcing fallback to less secure access paths</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Policy Weaknesses</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Group policy uses permit(principal, action, resource) with no conditions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoint policy not enabled (PolicyEnabled: false)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cedar policy checks identity but ignores device posture</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policy references nonexistent trust provider context key</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No endpoint-level policy refinement</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Access logging not enabled on instance</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Trust provider not validated (misconfigured OIDC URL)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No device trust provider attached</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Instance has no tags or naming convention</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoints exposed to broader network than intended</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Policy Weaknesses</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Group policy uses <code>permit(principal, action, resource);</code> with no conditions — allows all authenticated users</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoint policy not enabled (<code>PolicyEnabled: false</code>), relying solely on group policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Cedar policy checks identity claims but ignores device posture, allowing access from unmanaged devices</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policy references a trust provider context key that does not exist, causing silent evaluation failures</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No endpoint-level policy refinement — all applications in a group share identical access requirements</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Access logging not enabled on the Verified Access instance — no audit trail of access decisions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Trust provider not validated — OIDC issuer URL points to a misconfigured or deprecated IdP</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No device trust provider attached — access decisions are based solely on identity with no device compliance check</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Verified Access instance has no tags or naming convention, making it difficult to audit</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Endpoints configured with <code>network-interface</code> type exposed to broader network segments than intended</li></ul><p>---</p></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
-          <div class="cmd-title">List Verified Access Instances</div>
-          <pre><code>aws ec2 describe-verified-access-instances</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Trust Providers</div>
-          <pre><code>aws ec2 describe-verified-access-trust-providers</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Verified Access Groups</div>
-          <pre><code>aws ec2 describe-verified-access-groups</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Get Group Policy (Cedar)</div>
-          <pre><code>aws ec2 get-verified-access-group-policy \
-  --verified-access-group-id vagr-0dbe967baf14b7235</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check Logging Configuration</div>
-          <pre><code>aws ec2 describe-verified-access-instance-logging-configurations \
-  --verified-access-instance-ids vai-0ce000c0b7643abea</code></pre>
-        </div></div>
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><h4 style="color: #22d3ee;">List Verified Access Instances</h4><pre><code>aws ec2 describe-verified-access-instances</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-instances.html">AWS CLI Reference — describe-verified-access-instances</a></p><h4 style="color: #22d3ee;">List Trust Providers</h4><pre><code>aws ec2 describe-verified-access-trust-providers</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-trust-providers.html">AWS CLI Reference — describe-verified-access-trust-providers</a></p><h4 style="color: #22d3ee;">List Verified Access Groups</h4><pre><code>aws ec2 describe-verified-access-groups</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-groups.html">AWS CLI Reference — describe-verified-access-groups</a></p><h4 style="color: #22d3ee;">List Verified Access Endpoints</h4><pre><code>aws ec2 describe-verified-access-endpoints</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-endpoints.html">AWS CLI Reference — describe-verified-access-endpoints</a></p><h4 style="color: #22d3ee;">Get Group Policy (Cedar)</h4><pre><code>aws ec2 get-verified-access-group-policy \
+  --verified-access-group-id vagr-0dbe967baf14b7235</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/get-verified-access-group-policy.html">AWS CLI Reference — get-verified-access-group-policy</a></p><h4 style="color: #22d3ee;">Get Endpoint Policy (Cedar)</h4><pre><code>aws ec2 get-verified-access-endpoint-policy \
+  --verified-access-endpoint-id vae-066fac616d4d546f2</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/get-verified-access-endpoint-policy.html">AWS CLI Reference — get-verified-access-endpoint-policy</a></p><h4 style="color: #22d3ee;">Check Logging Configuration</h4><pre><code>aws ec2 describe-verified-access-instance-logging-configurations \
+  --verified-access-instance-ids vai-0ce000c0b7643abea</code></pre><p>Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-instance-logging-configurations.html">AWS CLI Reference — describe-verified-access-instance-logging-configurations</a></p><p>---</p></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Policy Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyVerifiedAccessGroupPolicy to blanket permit</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> ModifyVerifiedAccessEndpointPolicy to disable enforcement</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateVerifiedAccessEndpoint for sensitive internal resources</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> AttachVerifiedAccessTrustProvider (attacker-controlled)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateVerifiedAccessTrustProvider with rogue OIDC issuer</li></ul><div class="note"><strong>Key insight:</strong> Verified Access itself is not a path to IAM privilege escalation. However, modifying policies grants access to all protected internal applications.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Access Bypass</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Replace Cedar group policy with blanket permit</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable endpoint-level policy enforcement</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Attach attacker-controlled trust provider</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create endpoints in permissive groups</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify instance descriptions to obscure audit trail</li></ul><h4 style="color: #facc15;">Maintaining Access</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Generate fabricated device posture data</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exploit OIDC token issuance from compromised IdP</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create new endpoints pointing to internal resources</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Keep access logging disabled</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify trust provider to accept broader claims</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">High-Impact CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyVerifiedAccessGroupPolicy - policy changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyVerifiedAccessEndpointPolicy - endpoint policy changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateVerifiedAccessTrustProvider - new trust provider</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AttachVerifiedAccessTrustProvider - provider attached</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteVerifiedAccessEndpoint - endpoint removed</li></ul><h4 style="color: #4ade80;">Access Log Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Access from unexpected IP addresses</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed policy evaluations from new principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Successful access without device posture context</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk endpoint creation or modification</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Trust provider configuration changes</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Replace Group Policy with Blanket Permit</div>
-          <pre><code>aws ec2 modify-verified-access-group-policy \
-  --verified-access-group-id vagr-XXXXX \
-  --policy-enabled \
-  --policy-document &quot;permit(principal, action, resource);&quot;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable Endpoint Policy</div>
-          <pre><code>aws ec2 modify-verified-access-endpoint-policy \
-  --verified-access-endpoint-id vae-XXXXX \
-  --no-policy-enabled</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Create Rogue Trust Provider</div>
-          <pre><code>aws ec2 create-verified-access-trust-provider \
-  --trust-provider-type user \
-  --user-trust-provider-type oidc \
-  --oidc-options Issuer=https://attacker.example.com,AuthorizationEndpoint=...,TokenEndpoint=...</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Attach Trust Provider to Instance</div>
-          <pre><code>aws ec2 attach-verified-access-trust-provider \
-  --verified-access-instance-id vai-XXXXX \
-  --verified-access-trust-provider-id vatp-XXXXX</code></pre>
-        </div></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><p>Verified Access itself is not a path to IAM privilege escalation in the traditional sense. However, an attacker with <code>ec2:ModifyVerifiedAccessGroupPolicy</code> or <code>ec2:ModifyVerifiedAccessEndpointPolicy</code> permissions can weaken or remove access controls on protected applications, effectively granting themselves (or any user) access to internal resources.</p><div class="cmd-block">
+          <div class="cmd-title">Key escalation actions:</div>
+          <pre><code></code></pre>
+        </div><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:ModifyVerifiedAccessGroupPolicy</code> — Replace the Cedar policy on a group with a blanket permit, granting access to all endpoints in that group</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:ModifyVerifiedAccessEndpointPolicy</code> — Disable or weaken the policy on a specific endpoint</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:CreateVerifiedAccessEndpoint</code> — Add a new endpoint pointing to a sensitive internal resource under a permissive group</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:AttachVerifiedAccessTrustProvider</code> — Attach an attacker-controlled trust provider to supply fabricated identity or device data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:CreateVerifiedAccessTrustProvider</code> — Register a new trust provider pointing to an attacker-controlled OIDC issuer</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>ec2:ModifyVerifiedAccessInstance</code> — Modify the instance description or CIDR endpoint custom subdomain (limited direct impact, but could obscure audit trail by changing descriptions)</li></ul><p>---</p></div>
+      <div class="panel" style="border-color: #3b82f633;">
+        <h3 style="color: #3b82f6;">References</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #3b82f655;color:#3b82f6;">Source</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #3b82f655;color:#3b82f6;">URL</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">What is AWS Verified Access?</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/what-is-verified-access.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">How Verified Access works</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/how-it-works.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Verified Access policies (Cedar)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/auth-policies.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Trust providers for Verified Access</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/trust-providers.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Device-based trust providers</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/device-trust.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">IAM for Verified Access</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/security-iam.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Verified Access access logs</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/verified-access/latest/ug/access-logs-enable.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Walk through Verified Access policies (AWS Security Blog)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://aws.amazon.com/blogs/security/a-walk-through-aws-verified-access-policies/</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Integrating device trust providers (AWS Blog)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://aws.amazon.com/blogs/networking-and-content-delivery/integrating-aws-verified-access-with-device-trust-providers/</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: describe-verified-access-instances</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-instances.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: describe-verified-access-trust-providers</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-trust-providers.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: describe-verified-access-groups</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-groups.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: describe-verified-access-endpoints</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-endpoints.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: get-verified-access-group-policy</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/get-verified-access-group-policy.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: get-verified-access-endpoint-policy</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/get-verified-access-endpoint-policy.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: describe-verified-access-instance-logging-configurations</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-verified-access-instance-logging-configurations.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: modify-verified-access-instance-logging-configuration</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-verified-access-instance-logging-configuration.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: modify-verified-access-endpoint-policy</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-verified-access-endpoint-policy.html</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">CLI: modify-verified-access-group-policy</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-verified-access-group-policy.html</td></tr></table></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Unrestricted Policy Modification</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: Blanket Permit with No Conditions</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;ec2:ModifyVerifiedAccessGroupPolicy&quot;,
-    &quot;ec2:ModifyVerifiedAccessEndpointPolicy&quot;,
-    &quot;ec2:CreateVerifiedAccessTrustProvider&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;ec2:ModifyVerifiedAccessGroupPolicy&quot;,
+        &quot;ec2:ModifyVerifiedAccessEndpointPolicy&quot;,
+        &quot;ec2:CreateVerifiedAccessTrustProvider&quot;,
+        &quot;ec2:AttachVerifiedAccessTrustProvider&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Grants unrestricted ability to rewrite Cedar policies and attach arbitrary trust providers</p>
+          <p class="policy-desc"><strong>Why it is dangerous:</strong> Grants unrestricted ability to rewrite Cedar policies and attach arbitrary trust providers, allowing an attacker to bypass all Verified Access controls.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Auditor</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: Scoped Read-Only for Auditors</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;ec2:DescribeVerifiedAccessInstances&quot;,
-    &quot;ec2:DescribeVerifiedAccessGroups&quot;,
-    &quot;ec2:DescribeVerifiedAccessEndpoints&quot;,
-    &quot;ec2:GetVerifiedAccessGroupPolicy&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;ec2:DescribeVerifiedAccessInstances&quot;,
+        &quot;ec2:DescribeVerifiedAccessGroups&quot;,
+        &quot;ec2:DescribeVerifiedAccessEndpoints&quot;,
+        &quot;ec2:DescribeVerifiedAccessTrustProviders&quot;,
+        &quot;ec2:GetVerifiedAccessGroupPolicy&quot;,
+        &quot;ec2:GetVerifiedAccessEndpointPolicy&quot;,
+        &quot;ec2:DescribeVerifiedAccessInstanceLoggingConfigurations&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
 }</code></pre>
-          <p class="policy-desc">Permits enumeration and policy review without ability to modify access controls</p>
+          <p class="policy-desc"><strong>Why it is safe:</strong> Permits enumeration and policy review without the ability to modify any access control configuration.</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: Cedar Group Policy — No Conditions</span>
+          </div>
+          <pre><code>permit(principal, action, resource);</code></pre>
+          <p class="policy-desc"><strong>Why it is dangerous:</strong> Allows any authenticated user from any trust provider to access all endpoints in the group, regardless of group membership, device posture, or any other attribute.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: Cedar Group Policy — Identity and Device Posture</span>
+          </div>
+          <pre><code>permit(principal, action, resource)
+when {
+  context.idc.groups has &quot;c242c5b0-6081-1845-6fa8-6e0d9513c107&quot; &amp;&amp;
+  context.jamf.risk == &quot;LOW&quot;
+};</code></pre>
+          <p class="policy-desc"><strong>Why it is safe:</strong> Requires the user to be in a specific IAM Identity Center group (referenced by UUID) AND have a Jamf-assessed low-risk device before access is granted. Note: context keys use the trust provider's configured policy reference name (e.g., <code>context.idc</code> for IAM Identity Center, <code>context.jamf</code> for Jamf, <code>context.crwd</code> for CrowdStrike).</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Access Logging on Every Instance</h4>
-              <p>Send Verified Access logs to CloudWatch Logs, S3, or Kinesis Data Firehose for audit.</p>
+              <p>Send Verified Access access logs to CloudWatch Logs, S3, or Kinesis Data Firehose for audit and incident response. Source: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-verified-access-instance-logging-configuration.html">AWS CLI Reference — modify-verified-access-instance-logging-configuration</a></p>
               <pre><code>aws ec2 modify-verified-access-instance-logging-configuration \
-  --verified-access-instance-id vai-XXXXX \
-  --access-logs S3={Enabled=true,BucketName=my-va-logs-bucket}</code></pre>
+  --verified-access-instance-id vai-0ce000c0b7643abea \
+  --access-logs S3={Enabled=true,BucketName=my-va-logs-bucket,Prefix=verified-access/}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4F1;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Attach Both Identity and Device Trust Providers</h4>
-              <p>Never rely on identity alone. Attach at least one device trust provider (CrowdStrike, Jamf, JumpCloud) for device posture checks.</p>
+              <p>Never rely on identity alone. Attach at least one device trust provider (CrowdStrike, Jamf, or JumpCloud) to enforce device posture checks. Source: <a href="https://docs.aws.amazon.com/verified-access/latest/ug/device-trust.html">Device-based trust providers for Verified Access</a></p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DC;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Write Restrictive Cedar Policies</h4>
-              <p>Use group-level policies for broad requirements and endpoint-level policies for application-specific conditions.</p>
+              <h4>Write Restrictive Cedar Policies at Both Group and Endpoint Levels</h4>
+              <p>Use group-level policies for broad requirements (e.g., identity group membership) and endpoint-level policies for application-specific conditions (e.g., MFA, device compliance score). Source: <a href="https://docs.aws.amazon.com/verified-access/latest/ug/auth-policies.html">Verified Access policies</a></p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Restrict IAM Permissions for Modification</h4>
-              <p>Limit ec2:ModifyVerifiedAccess*, ec2:CreateVerifiedAccess*, and ec2:AttachVerifiedAccessTrustProvider to administrators.</p>
+              <h4>Restrict IAM Permissions for Verified Access Modification</h4>
+              <p>Limit <code>ec2:ModifyVerifiedAccess*</code>, <code>ec2:CreateVerifiedAccess*</code>, and <code>ec2:AttachVerifiedAccessTrustProvider</code> actions to a small set of administrators. Use IAM condition keys and SCPs to prevent unauthorized changes. Source: <a href="https://docs.aws.amazon.com/verified-access/latest/ug/security-iam.html">Identity and access management for Verified Access</a></p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F50D;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Monitor CloudTrail for Policy Changes</h4>
-              <p>Alert on ModifyVerifiedAccessGroupPolicy, CreateVerifiedAccessTrustProvider, and DeleteVerifiedAccessEndpoint.</p>
+              <p>Set up CloudWatch Alarms on CloudTrail events for the following API actions: - <code>ModifyVerifiedAccessGroupPolicy</code> - <code>ModifyVerifiedAccessEndpointPolicy</code> - <code>CreateVerifiedAccessTrustProvider</code> - <code>AttachVerifiedAccessTrustProvider</code> - <code>DeleteVerifiedAccessEndpoint</code></p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2705;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Validate Trust Provider Configuration</h4>
-              <p>Audit OIDC issuer URL, client ID, and scopes on identity trust providers regularly.</p>
+              <h4>Validate Trust Provider Configuration Regularly</h4>
+              <p>Audit that the OIDC issuer URL, client ID, and scopes on identity trust providers are correct and point to your organization's IdP. Verify that device trust provider integrations are active and reporting current posture data. Source: <a href="https://docs.aws.amazon.com/verified-access/latest/ug/trust-providers.html">Trust providers for Verified Access</a></p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS Verified Access Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Verified Access Security Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

@@ -263,7 +263,7 @@
         <span class="header-title">AWS Firewall Manager Security</span>
         <span class="header-badge">MANAGEMENT</span>
       </div>
-      <p class="header-desc">AWS Firewall Manager is a centralized security management service that lets you configure and deploy firewall rules and protections across multiple accounts and resources in an AWS Organization. It manages WAF, Shield Advanced, VPC Security Groups, Network ACLs, Network Firewall, Route 53 Resolver DNS Firewall, and third-party firewalls.</p>
+      <p class="header-desc">AWS Firewall Manager is a centralized security management service that lets you configure and deploy firewall rules and protections across multiple accounts and resources in an AWS Organization. It manages WAF, Shield Advanced, VPC Security Groups, Network ACLs, Network Firewall, Route 53 Resolver DNS Firewall, and third-party firewalls (Palo Alto Networks Cloud NGFW, Fortigate CNF).</p>
     </div>
   </div>
 </div>
@@ -279,28 +279,28 @@
           <div class="stat-label">Scope</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">WAF/SG/NF/DNS</div>
+          <div class="stat-value" style="color: #60a5fa;">WAF/SG/NF/DNS/Shield/NACL</div>
           <div class="stat-label">Policy Types</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">Orgs + Config</div>
+          <div class="stat-value" style="color: #c084fc;">Organizations + Config</div>
           <div class="stat-label">Requires</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#06b6d4;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#06b6d4;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #06b6d4;">Centralized Policy Management</h4>
-          <p>Firewall Manager enforces security policies across all accounts in an AWS Organization. Policies are automatically applied to new accounts and resources as they are added.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Compromising the FMS administrator account grants the ability to weaken or delete security policies across the entire organization in a single operation.</div>
-        </div>
-        <div>
+          <p>Firewall Manager enforces security policies across all accounts in an AWS Organization. Policies are automatically applied to new accounts and resources as they are added. The FMS administrator account has the authority to create, modify, and delete policies that affect every member account in scope.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> Compromising the FMS administrator account grants the ability to weaken or delete security policies across the entire organization in a single operation</div>
+        </div><div>
           <h4 style="color: #06b6d4;">Auto-Remediation and Scope Control</h4>
-          <p>Policies can automatically remediate non-compliant resources. Scope is controlled via account inclusion/exclusion maps, resource tags, and resource types.</p>
-          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> An attacker with fms:PutPolicy can modify a policy's scope or disable remediation, leaving resources unprotected without triggering obvious alerts.</div>
+          <p>Policies can automatically remediate non-compliant resources. Scope is controlled via account inclusion/exclusion maps, resource tags, and resource types. Disabling auto-remediation or narrowing scope silently removes protections.</p>
+          <div class="attack-note"><span style="color:#06b6d4;">Attack note:</span> An attacker with fms:PutPolicy can modify a policy's scope or disable remediation, leaving resources unprotected without triggering obvious alerts</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,17 +315,17 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Firewall Manager is an organization-wide security control plane. Compromise of the FMS administrator account can silently remove WAF rules, security group restrictions, and Network Firewall protections across every account in the organization.</p>
+  <p class="risk-desc">Firewall Manager is an organization-wide security control plane. Compromise of the FMS administrator account or misconfiguration of policies can silently remove WAF rules, security group restrictions, and Network Firewall protections across every account in the organization. The blast radius is the entire AWS Organization.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Policy Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable RemediationEnabled to stop auto-fix</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Change IncludeMap/ExcludeMap to narrow scope</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Switch policy rules to permissive configurations</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete critical policies with fms:DeletePolicy</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Narrow admin scope to push policies OUT_OF_ADMIN_SCOPE</li></ul><h4 style="color: #f87171;">Administrative Takeover</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> fms:PutAdminAccount to register rogue administrator</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> fms:AssociateAdminAccount to designate attacker as admin</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> fms:DeleteNotificationChannel to suppress alerts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> fms:DisassociateAdminAccount to remove legitimate admin</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify admin scope to limit legitimate admin visibility</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Policy Manipulation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify existing policy to disable RemediationEnabled, stopping auto-fix of non-compliant resources</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Change IncludeMap/ExcludeMap to remove accounts from policy scope</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Switch SecurityServiceType policy rules to permissive configurations via ManagedServiceData</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete critical policies with fms:DeletePolicy, removing organization-wide protections</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Narrow admin scope via <code>fms:PutAdminAccount</code> to push policies into <code>OUT_OF_ADMIN_SCOPE</code> status, effectively disabling their enforcement</li></ul><h4 style="color: #f87171;">Administrative Takeover</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use fms:PutAdminAccount to register a rogue administrator account (requires compromise of the Organizations management account -- the highest-privilege account in the organization)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Use fms:AssociateAdminAccount to designate attacker-controlled account as FMS admin</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify admin scope via fms:PutAdminAccount to limit legitimate admin visibility</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Delete notification channel with fms:DeleteNotificationChannel to suppress compliance alerts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disassociate the legitimate admin account with fms:DisassociateAdminAccount</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Policy Scope Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> RemediationEnabled set to false</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad tag exclusions leaving resources unprotected</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IncludeMap limited to subset of accounts</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policies created only in one Region</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DeleteUnusedFMManagedResources set to false</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AWS Config not enabled in all accounts/Regions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SNS notification channel configured</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security group policies in audit mode only</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> WAF policies using COUNT instead of BLOCK</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Third-party firewall integration not verified</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Policy Scope Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> RemediationEnabled set to false -- non-compliant resources are reported but never fixed</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> ExcludeResourceTags set to true with overly broad tag exclusions, leaving critical resources unprotected</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IncludeMap limited to a subset of accounts, leaving other member accounts without protection</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policies created only in one Region while resources exist in multiple Regions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> DeleteUnusedFMManagedResources set to false, leaving orphaned security resources after policy deletion</li></ul><h4 style="color: #fb923c;">Operational Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> AWS Config not enabled in all accounts and Regions, preventing Firewall Manager from detecting non-compliance</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No SNS notification channel configured (PutNotificationChannel never called), so compliance violations go unnoticed</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security group policies in audit mode only (SECURITY_GROUPS_USAGE_AUDIT) without corresponding enforcement policies</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> WAF policies using COUNT action instead of BLOCK in managed rule groups</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Third-party firewall integration enabled without verifying the third-party tenant configuration</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">Identify FMS Administrator Account</div>
           <pre><code>aws fms get-admin-account</code></pre>
         </div><div class="cmd-block">
@@ -339,122 +339,154 @@
           <div class="cmd-title">List Member Accounts Under FMS</div>
           <pre><code>aws fms list-member-accounts</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Check Notification Channel</div>
-          <pre><code>aws fms get-notification-channel</code></pre>
-        </div></div>
-      <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">fms:PutPolicy - Weaken Org Security</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify existing policies to disable remediation</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Narrow scope to exclude target accounts</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Change managed service data to permissive rules</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Remove security controls across all in-scope accounts</li></ul><h4 style="color: #c084fc;">fms:DeletePolicy - Remove Protections</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Delete Firewall Manager policies at scale</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Remove centrally managed WAF/SG/NF configurations</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Combine with fms:DeleteNotificationChannel to go unnoticed</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> fms:AssociateAdminAccount to install own admin account</li></ul></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Weakening Policies</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Set RemediationEnabled to false on all policies</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add broad tag exclusions to bypass protection</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Narrow IncludeMap to exclude critical accounts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete notification channel to suppress alerts</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Switch WAF rules from BLOCK to COUNT</li></ul><h4 style="color: #facc15;">Administrative Takeover</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register rogue FMS administrator account</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disassociate legitimate admin account</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify admin scope to limit visibility</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete critical policies across organization</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable auto-remediation silently</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">High-Impact CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutPolicy - policy created or modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeletePolicy - policy deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> AssociateAdminAccount - admin account changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DisassociateAdminAccount - admin removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutAdminAccount - admin account added</li></ul><h4 style="color: #4ade80;">Compliance Monitoring</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeleteNotificationChannel - alerts suppressed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ListComplianceStatus - check policy compliance</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Policy scope changes via IncludeMap/ExcludeMap</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RemediationEnabled toggle on policies</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New FMS administrators via list-admin-accounts-for-organization</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Delete a Critical Policy</div>
-          <pre><code>aws fms delete-policy \
-  --policy-id a1b2c3d4-5678-90ab-cdef-EXAMPLE11111</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Delete Notification Channel</div>
-          <pre><code>aws fms delete-notification-channel</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disassociate Admin Account</div>
-          <pre><code>aws fms disassociate-admin-account</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List All Admins for Recon</div>
-          <pre><code>aws fms list-admin-accounts-for-organization</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check Compliance Status</div>
+          <div class="cmd-title">Check Compliance Status for a Policy</div>
           <pre><code>aws fms list-compliance-status \
   --policy-id a1b2c3d4-5678-90ab-cdef-EXAMPLE11111</code></pre>
-        </div></div></div>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Detailed Compliance for Specific Account</div>
+          <pre><code>aws fms get-compliance-detail \
+  --policy-id a1b2c3d4-5678-90ab-cdef-EXAMPLE11111 \
+  --member-account 123456789012</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Violation Details for a Resource</div>
+          <pre><code>aws fms get-violation-details \
+  --policy-id a1b2c3d4-5678-90ab-cdef-EXAMPLE11111 \
+  --member-account 123456789012 \
+  --resource-id sg-0123456789abcdef0 \
+  --resource-type AWS::EC2::SecurityGroup</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Check Notification Channel Configuration</div>
+          <pre><code>aws fms get-notification-channel</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Resource Sets</div>
+          <pre><code>aws fms list-resource-sets</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List All FMS Administrators in the Organization</div>
+          <pre><code>aws fms list-admin-accounts-for-organization</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">fms:PutPolicy -- Weaken Organization-Wide Security</h4><p>An attacker with <code>fms:PutPolicy</code> can modify existing Firewall Manager policies to disable remediation, narrow scope, or change the managed service data to permissive rules. This effectively removes security controls across all in-scope accounts without needing direct access to those accounts.</p><h4 style="color: #c084fc;">fms:AssociateAdminAccount / fms:PutAdminAccount -- Administrative Takeover</h4><p>The <code>fms:AssociateAdminAccount</code> action (callable from the Organizations management account) designates the FMS administrator. The <code>fms:PutAdminAccount</code> action creates or updates additional FMS administrator accounts. An attacker with access to the management account and these permissions can install their own account as FMS administrator, gaining full control over all security policies in the organization.</p><h4 style="color: #c084fc;">fms:DeletePolicy -- Remove Protections at Scale</h4><p>An attacker with <code>fms:DeletePolicy</code> can delete Firewall Manager policies, which removes the centrally managed WAF rules, security group rules, or Network Firewall configurations from all accounts in scope. Combined with <code>fms:DeleteNotificationChannel</code>, the deletion can go unnoticed.</p></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Broad FMS Exclusion, No Remediation</span>
+            <span style="color: #f87171; font-weight: 600;">Bad -- Overly Broad Exclusion, No Remediation</span>
           </div>
           <pre><code>{
-  &quot;RemediationEnabled&quot;: false,
-  &quot;ExcludeResourceTags&quot;: true,
-  &quot;ExcludeMap&quot;: {
-    &quot;ACCOUNT&quot;: [&quot;111111111111&quot;, &quot;222222222222&quot;]
+  &quot;Policy&quot;: {
+    &quot;PolicyName&quot;: &quot;WAFPolicy&quot;,
+    &quot;SecurityServicePolicyData&quot;: {
+      &quot;Type&quot;: &quot;WAFV2&quot;,
+      &quot;ManagedServiceData&quot;: &quot;{\&quot;type\&quot;:\&quot;WAFV2\&quot;,\&quot;defaultAction\&quot;:{\&quot;type\&quot;:\&quot;ALLOW\&quot;}}&quot;
+    },
+    &quot;ResourceType&quot;: &quot;AWS::ElasticLoadBalancingV2::LoadBalancer&quot;,
+    &quot;ExcludeResourceTags&quot;: true,
+    &quot;ResourceTags&quot;: [
+      {
+        &quot;Key&quot;: &quot;Environment&quot;,
+        &quot;Value&quot;: &quot;Dev&quot;
+      }
+    ],
+    &quot;RemediationEnabled&quot;: false,
+    &quot;ExcludeMap&quot;: {
+      &quot;ACCOUNT&quot;: [&quot;111111111111&quot;, &quot;222222222222&quot;]
+    }
   }
 }</code></pre>
-          <p class="policy-desc">Remediation disabled, accounts excluded, and resources excluded by tag. Non-compliant resources are never fixed.</p>
+          <p class="policy-desc">Default action is ALLOW, remediation is disabled, two accounts are excluded, and all Dev-tagged resources are excluded. Non-compliant resources will never be fixed and large portions of the organization are left unprotected.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Full Scope, Remediation Enabled</span>
+            <span style="color: #4ade80; font-weight: 600;">Good -- Full Scope, Remediation Enabled, Enforcing Rules</span>
           </div>
           <pre><code>{
-  &quot;RemediationEnabled&quot;: true,
-  &quot;ExcludeResourceTags&quot;: false,
-  &quot;DeleteUnusedFMManagedResources&quot;: true,
-  &quot;IncludeMap&quot;: {}
+  &quot;Policy&quot;: {
+    &quot;PolicyName&quot;: &quot;WAFPolicy-AllAccounts&quot;,
+    &quot;SecurityServicePolicyData&quot;: {
+      &quot;Type&quot;: &quot;WAFV2&quot;,
+      &quot;ManagedServiceData&quot;: &quot;{\&quot;type\&quot;:\&quot;WAFV2\&quot;,\&quot;defaultAction\&quot;:{\&quot;type\&quot;:\&quot;BLOCK\&quot;},\&quot;preProcessRuleGroups\&quot;:[{\&quot;managedRuleGroupIdentifier\&quot;:{\&quot;vendorName\&quot;:\&quot;AWS\&quot;,\&quot;managedRuleGroupName\&quot;:\&quot;AWSManagedRulesCommonRuleSet\&quot;},\&quot;overrideAction\&quot;:{\&quot;type\&quot;:\&quot;NONE\&quot;},\&quot;ruleGroupType\&quot;:\&quot;ManagedRuleGroup\&quot;,\&quot;excludeRules\&quot;:[]}],\&quot;postProcessRuleGroups\&quot;:[]}&quot;
+    },
+    &quot;ResourceType&quot;: &quot;AWS::ElasticLoadBalancingV2::LoadBalancer&quot;,
+    &quot;ResourceTypeList&quot;: [
+      &quot;AWS::ElasticLoadBalancingV2::LoadBalancer&quot;,
+      &quot;AWS::CloudFront::Distribution&quot;,
+      &quot;AWS::ApiGateway::Stage&quot;
+    ],
+    &quot;ExcludeResourceTags&quot;: false,
+    &quot;ResourceTags&quot;: [],
+    &quot;RemediationEnabled&quot;: true,
+    &quot;DeleteUnusedFMManagedResources&quot;: true,
+    &quot;IncludeMap&quot;: {}
+  }
 }</code></pre>
-          <p class="policy-desc">Remediation enabled, no exclusions, all accounts covered, orphaned resources cleaned up.</p>
+          <p class="policy-desc">Default action is BLOCK, AWS Managed Rules Common Rule Set is enforced, remediation is enabled, no accounts or tags are excluded, multiple resource types are covered, and orphaned resources are cleaned up on policy deletion.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Restrict FMS Administrative Permissions</h4>
-              <p>Limit fms:PutPolicy, fms:DeletePolicy, fms:AssociateAdminAccount to minimum principals. Use SCPs to block member account FMS writes.</p>
+              <p>Limit <code>fms:PutPolicy</code>, <code>fms:DeletePolicy</code>, <code>fms:AssociateAdminAccount</code>, and <code>fms:PutAdminAccount</code> to the absolute minimum number of principals. Use SCPs to prevent member accounts from calling FMS write actions.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2705;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Auto-Remediation on All Policies</h4>
-              <p>Set RemediationEnabled: true on every Firewall Manager policy. Audit-only mode is useful during rollout, but production must enforce.</p>
+              <p>Set <code>RemediationEnabled: true</code> on every Firewall Manager policy. Audit-only mode is useful during initial rollout, but production policies must enforce compliance automatically.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F514;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Configure SNS Notification Channel</h4>
-              <p>Use aws fms put-notification-channel to send compliance findings to an SNS topic monitored by your security team.</p>
-              <pre><code>aws fms put-notification-channel \
-  --sns-topic-arn arn:aws:sns:us-east-1:123456789012:fms-alerts \
-  --sns-role-name FMSSNSRole</code></pre>
+              <p>Use <code>aws fms put-notification-channel</code> to send compliance findings to an SNS topic monitored by your security team. Without this, policy violations are only visible in the FMS console.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2699;&#xFE0F;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable AWS Config in All Accounts</h4>
-              <p>FMS depends on AWS Config to detect resource compliance. Ensure Config is enabled in every account and Region.</p>
+              <h4>Enable AWS Config in All Accounts and Regions</h4>
+              <p>Firewall Manager depends on AWS Config to detect resource compliance. If Config is not enabled in an account or Region, FMS cannot evaluate or remediate resources there. Use an AWS Config conformance pack or Organizations delegated administrator to ensure full coverage.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Monitor FMS API Calls with CloudTrail</h4>
-              <p>Alert on PutPolicy, DeletePolicy, AssociateAdminAccount, DisassociateAdminAccount, and DeleteNotificationChannel.</p>
+              <p>Create CloudTrail alerts for <code>fms:PutPolicy</code>, <code>fms:DeletePolicy</code>, <code>fms:AssociateAdminAccount</code>, <code>fms:DisassociateAdminAccount</code>, <code>fms:PutAdminAccount</code>, and <code>fms:DeleteNotificationChannel</code>. These are high-impact actions that should trigger immediate investigation.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F30D;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Apply Policies Across All Regions</h4>
-              <p>FMS policies are Regional. Create policies in every Region where you have resources, or deny resource creation in uncovered Regions.</p>
+              <p>Firewall Manager policies are Regional. Create policies in every Region where you have resources, or use SCPs to deny resource creation in Regions where FMS policies are not deployed.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Use IncludeMap Sparingly -- Default to All Accounts</h4>
+              <p>Leave <code>IncludeMap</code> empty (which means all accounts) rather than listing specific accounts. Use <code>ExcludeMap</code> only for well-justified exceptions, and audit exclusions regularly.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS Firewall Manager Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Firewall Manager Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

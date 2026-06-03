@@ -263,227 +263,225 @@
         <span class="header-title">Amazon DocumentDB Security</span>
         <span class="header-badge">DATABASE</span>
       </div>
-      <p class="header-desc">Amazon DocumentDB is a managed document database compatible with MongoDB wire protocol. It stores structured application data (user records, session data, financial documents). Snapshots can be shared publicly, TLS and audit logging are configurable parameters that can be disabled, and encryption at rest cannot be enabled after cluster creation.</p>
+      <p class="header-desc"></p>
     </div>
   </div>
 </div>
 
-<!-- Stats -->
-<div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-value" style="color: #f87171;">HIGH</div>
-          <div class="stat-label">Risk Level</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: #4ade80;">VPC-only</div>
-          <div class="stat-label">Network</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: #60a5fa;">MongoDB 4/5/8</div>
-          <div class="stat-label">Compatibility</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">KMS</div>
-          <div class="stat-label">Encryption</div>
-        </div></div>
-
 <!-- Overview -->
-<div class="section"><h2><span style="color:#ec4899;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
-        <div>
-          <h4 style="color: #ec4899;">Document Database &amp; Data Access</h4>
-          <p>DocumentDB stores structured application data accessible via MongoDB wire protocol on port 27017. Clusters run exclusively inside a VPC. Supports MongoDB 4.0, 5.0, and 8.0 compatibility modes.</p>
-          <div class="attack-note"><span style="color:#ec4899;">Attack note:</span> NoSQL injection techniques that work against MongoDB generally work against DocumentDB (except $where -- no server-side JavaScript). Auth bypass: {"username": {"$ne": ""}, "password": {"$ne": ""}} returns all documents.</div>
-        </div>
-        <div>
-          <h4 style="color: #ec4899;">Snapshots &amp; Configuration</h4>
-          <p>Manual snapshots can be shared publicly or cross-account. TLS and audit logging are parameters that can be disabled. Encryption at rest is permanent -- if created unencrypted, it cannot be changed.</p>
-          <div class="attack-note"><span style="color:#ec4899;">Attack note:</span> An attacker with rds:ModifyDBClusterParameterGroup can set tls=disabled and audit_logs=disabled, downgrading security and reducing visibility after instance reboot.</div>
-        </div></div></div>
+<div class="section"><h2><span style="color:#ec4899;">📋</span> Service Overview</h2><div class="overview-grid">
+        <div><p>Amazon DocumentDB is a managed document database service compatible with the MongoDB wire protocol. It supports MongoDB 4.0, 5.0, and 8.0 compatibility modes. Clusters run exclusively inside a VPC with no public endpoint option.</p><p><strong>From an attacker's perspective</strong>, DocumentDB is valuable because:</p><ul><li><span class="bullet" style="color: #ec4899;">&#x2022;</span> It stores structured application data (user records, session data, financial documents) that is directly exploitable.</li><li><span class="bullet" style="color: #ec4899;">&#x2022;</span> The MongoDB wire protocol compatibility means NoSQL injection techniques that work against MongoDB generally work against DocumentDB (except those requiring server-side JavaScript execution, such as <code>$where</code>, which DocumentDB does not support).</li><li><span class="bullet" style="color: #ec4899;">&#x2022;</span> Snapshots can be shared publicly or cross-account, creating data exfiltration paths independent of network access.</li><li><span class="bullet" style="color: #ec4899;">&#x2022;</span> TLS and audit logging are configurable parameters that can be disabled by anyone with <code>rds:ModifyDBClusterParameterGroup</code> permissions (TLS change requires instance reboot and is visible in CloudTrail).</li><li><span class="bullet" style="color: #ec4899;">&#x2022;</span> Encryption at rest cannot be enabled after cluster creation — if a cluster was created unencrypted, that decision is permanent.</li></ul><p>---</p></div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
-  <div class="risk-gauge">
-    <div class="risk-bar-container">
-      <div class="risk-bar">
-        <div class="risk-bar-fill" style="width: 80%;"></div>
-      </div>
-      <div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span><span>Critical</span></div>
-    </div>
-    <div class="risk-score">
-      <div class="risk-score-value">8.0</div>
-      <div class="risk-score-label">Risk Score</div>
-    </div>
-  </div>
-  <p class="risk-desc">DocumentDB stores application-level structured data (PII, credentials, financial records). Cluster-wide settings mean all databases share the same auth, TLS, and encryption. Audit logging is disabled by default. Data-plane operations are not in CloudTrail.</p>
+  <p class="risk-desc">---</p>
+  <table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Factor</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Rating</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Detail</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Data Sensitivity</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>High</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Stores application-level structured data: PII, credentials, financial records</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Blast Radius</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>High</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Cluster-wide — all databases and collections in a cluster share the same auth, TLS, and encryption settings</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Lateral Movement</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Medium</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Master credentials may be reused; snapshots enable data movement to attacker-controlled accounts</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Detection Difficulty</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Medium</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Audit logging disabled by default; data-plane operations (queries) are not in CloudTrail</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Recovery Complexity</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Medium</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Point-in-time restore available (up to 35 days), but encryption settings are immutable</td></tr></table>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Initial Access</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> NoSQL injection via application ($gt, $ne, $regex)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Credential theft from Secrets Manager / environment</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Public or cross-account snapshot restore</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> VPC peering / Transit Gateway pivot to cluster endpoint</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Parameter group tampering (tls=disabled, audit_logs=disabled)</li></ul><h4 style="color: #f87171;">Persistence &amp; Escalation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Create backdoor database users via db.createUser()</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Snapshot exfiltration to attacker account</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Cross-region snapshot copy for durable access</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Event subscription for reconnaissance</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Disable deletion protection for ransomware path</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Initial Access</h4><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">#</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">Vector</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">Description</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>NoSQL Injection via Application</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Applications using MongoDB drivers against DocumentDB are vulnerable to operator injection (<code>$gt</code>, <code>$ne</code>, <code>$regex</code>) if user input is not sanitized. Authentication bypass: <code>{&quot;username&quot;: {&quot;$ne&quot;: &quot;&quot;}, &quot;password&quot;: {&quot;$ne&quot;: &quot;&quot;}}</code> returns all documents. Note: <code>$where</code> is not supported by DocumentDB (no server-side JavaScript execution).</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Credential Theft from Secrets Manager / Environment</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB master credentials stored in environment variables, application configs, or Secrets Manager with overly broad access policies.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Snapshot Restore in Attacker Account</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">If a manual snapshot is shared with <code>&quot;all&quot;</code> (public) or a specific attacker account ID, the attacker can restore the full database in their own account and read all data without network access to the original cluster.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>VPC Peering / Transit Gateway Pivot</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB has no public endpoint, but an attacker who compromises a peered VPC or Transit Gateway attachment gains network-level access to the cluster endpoint.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Parameter Group Tampering</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">An attacker with <code>rds:ModifyDBClusterParameterGroup</code> can set <code>tls=disabled</code> and <code>audit_logs=disabled</code>, downgrading security and reducing visibility after an instance reboot.</td></tr></table><h4 style="color: #f87171;">Persistence &amp; Privilege Escalation</h4><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">#</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">Vector</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #f8717155;color:#f87171;">Description</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Database User Creation</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">An attacker with master credentials can create new database users via the MongoDB shell (<code>db.createUser()</code>). These users persist independently of IAM and survive credential rotation of the master user.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Snapshot Exfiltration for Offline Access</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>create-db-cluster-snapshot</code> + <code>modify-db-cluster-snapshot-attribute</code> to share snapshot with attacker account. Data access persists even after the original cluster is secured.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Cross-Region Snapshot Copy</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>copy-db-cluster-snapshot</code> with <code>--kms-key-id</code> in a different region creates a durable copy of data outside the victim's operational region.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Event Subscription for Reconnaissance</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>create-event-subscription</code> with an attacker-controlled SNS topic receives notifications about cluster modifications, failovers, and maintenance — continuous intel on the target environment.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Disable Deletion Protection</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>modify-db-cluster --no-deletion-protection</code> removes the safety net, enabling future destructive actions including cluster deletion (ransomware path).</td></tr></table><p>---</p></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Critical</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> TLS disabled (tls=disabled) -- cleartext data</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Audit logging disabled (default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Public snapshots (restore attribute set to all)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Encryption at rest not enabled (permanent)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Deletion protection disabled</li></ul><h4 style="color: #fb923c;">High</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Default KMS key (aws/rds) limits cross-account control</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Backup retention below 7 days</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly permissive security group on port 27017</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Profiler not enabled for suspicious query detection</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Master credentials not rotated</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Critical</h4><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">#</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">Misconfiguration</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">Impact</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>TLS Disabled (<code>tls=disabled</code>)</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">All data between application and cluster transmitted in cleartext. Credentials visible to anyone with network access. Security Hub control: DocumentDB.6</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Audit Logging Disabled (default)</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">No record of DDL or DML operations. Authentication failures, data access, and schema changes are invisible. Security Hub control: DocumentDB.4</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Public Snapshots (<code>restore</code> attribute set to <code>all</code>)</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Any AWS account worldwide can restore the snapshot and read all data. Security Hub control: DocumentDB.3. AWS Config rule: <code>docdb-cluster-snapshot-public-prohibited</code></td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Encryption at Rest Not Enabled</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Data on disk, automated backups, snapshots, and read replicas are all unencrypted. Cannot be retroactively enabled — cluster must be recreated. Security Hub control: DocumentDB.1</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Deletion Protection Disabled</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Cluster can be deleted by any principal with <code>rds:DeleteDBCluster</code>. Security Hub control: DocumentDB.5</td></tr></table><h4 style="color: #fb923c;">High</h4><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">#</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">Misconfiguration</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #fb923c55;color:#fb923c;">Impact</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Default KMS Key Used for Encryption</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">The AWS managed key (<code>aws/rds</code>) cannot be shared cross-account and cannot have custom key policies. Limits the ability to control access to encrypted snapshots.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Backup Retention Below 7 Days</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Reduces the window for point-in-time recovery after a breach. Security Hub control: DocumentDB.2 (minimum 7 days recommended)</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Overly Permissive Security Groups</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Security group allowing <code>0.0.0.0/0</code> on port 27017 within the VPC. While DocumentDB has no public endpoint, this allows any resource in the VPC (including compromised instances) to connect.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>No Profiler Enabled (<code>profiler=disabled</code>)</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Slow or suspicious queries (large collection scans, regex-based exfiltration) go undetected. Default threshold is 100ms when enabled.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Master Credentials Not Rotated</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Static master username/password with no Secrets Manager rotation configured. Credentials may be embedded in application code or CI/CD pipelines.</td></tr></table><p>---</p></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
-          <div class="cmd-title">List All DocumentDB Clusters</div>
-          <pre><code>aws docdb describe-db-clusters \
-  --filter Name=engine,Values=docdb</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check TLS and Parameter Config</div>
-          <pre><code>aws docdb describe-db-cluster-parameters \
-  --db-cluster-parameter-group-name &lt;param-group&gt;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Cluster Snapshots</div>
-          <pre><code>aws docdb describe-db-cluster-snapshots</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Check Snapshot Sharing (Public Access)</div>
-          <pre><code>aws docdb describe-db-cluster-snapshot-attributes \
-  --db-cluster-snapshot-identifier &lt;snapshot-id&gt;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">List Parameter Groups</div>
-          <pre><code>aws docdb describe-db-cluster-parameter-groups</code></pre>
-        </div></div>
+        <h3 style="color: #22d3ee;">🔍 Enumeration Commands</h3><p>All commands use the <code>aws docdb</code> CLI namespace. Verified against AWS CLI v2.</p><h4 style="color: #22d3ee;">List All DocumentDB Clusters</h4><pre><code>aws docdb describe-db-clusters \
+  --filter Name=engine,Values=docdb</code></pre><h4 style="color: #22d3ee;">List All DocumentDB Instances</h4><pre><code>aws docdb describe-db-instances</code></pre><h4 style="color: #22d3ee;">Check TLS and Parameter Configuration</h4><pre><code>aws docdb describe-db-cluster-parameters \
+  --db-cluster-parameter-group-name &lt;parameter-group-name&gt;</code></pre><h4 style="color: #22d3ee;">List Cluster Snapshots</h4><pre><code>aws docdb describe-db-cluster-snapshots</code></pre><h4 style="color: #22d3ee;">Check Snapshot Sharing Attributes (Public Access)</h4><pre><code>aws docdb describe-db-cluster-snapshot-attributes \
+  --db-cluster-snapshot-identifier &lt;snapshot-id&gt;</code></pre><h4 style="color: #22d3ee;">List Subnet Groups</h4><pre><code>aws docdb describe-db-subnet-groups</code></pre><h4 style="color: #22d3ee;">List Tags on a Cluster</h4><pre><code>aws docdb list-tags-for-resource \
+  --resource-name arn:aws:rds:&lt;region&gt;:&lt;account-id&gt;:cluster:&lt;cluster-id&gt;</code></pre><h4 style="color: #22d3ee;">List Events for a Cluster</h4><pre><code>aws docdb describe-events \
+  --source-type db-cluster \
+  --source-identifier &lt;cluster-id&gt;</code></pre><h4 style="color: #22d3ee;">List Parameter Groups</h4><pre><code>aws docdb describe-db-cluster-parameter-groups</code></pre><h4 style="color: #22d3ee;">Check Engine Versions</h4><pre><code>aws docdb describe-db-engine-versions \
+  --engine docdb</code></pre><h4 style="color: #22d3ee;">List Pending Maintenance Actions</h4><pre><code>aws docdb describe-pending-maintenance-actions</code></pre><p>---</p></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Data Access Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Master credentials grant full database access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Snapshot restore reveals all cluster data</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Cross-account snapshot sharing for offline access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Parameter group modification disables security controls</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Database user creation bypasses IAM controls</li></ul><div class="note"><strong>Key insight:</strong> DocumentDB uses the rds: IAM action namespace. Granting rds:* gives full control over all RDS and DocumentDB resources.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Data-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create database users that persist beyond IAM changes</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Snapshot exfiltration for offline data access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Cross-region snapshot copy to attacker region</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Event subscription for continuous reconnaissance</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain network access to cluster endpoint</li></ul><h4 style="color: #facc15;">Infrastructure-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable deletion protection for future destruction</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable TLS for credential sniffing</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Disable audit logging to hide activity</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Reduce backup retention to limit recovery</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add permissive security group rules</li></ul></div>
+        <h3 style="color: #c084fc;">📤 Data Exfiltration Paths</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #c084fc55;color:#c084fc;">#</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #c084fc55;color:#c084fc;">Path</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #c084fc55;color:#c084fc;">Method</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Snapshot Share to External Account</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>aws docdb modify-db-cluster-snapshot-attribute --db-cluster-snapshot-identifier &lt;snap&gt; --attribute-name restore --values-to-add &lt;attacker-account-id&gt;</code> — grants restore access to a specific account.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Snapshot Made Public</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>aws docdb modify-db-cluster-snapshot-attribute --db-cluster-snapshot-identifier &lt;snap&gt; --attribute-name restore --values-to-add all</code> — any AWS account can restore and read the data.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Cross-Region Snapshot Copy</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>aws docdb copy-db-cluster-snapshot --source-db-cluster-snapshot-identifier &lt;snap-arn&gt; --target-db-cluster-snapshot-identifier &lt;new-name&gt; --kms-key-id &lt;attacker-key&gt;</code> — moves data to a region the victim may not monitor.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Restore Snapshot to New Cluster</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>aws docdb restore-db-cluster-from-snapshot --db-cluster-identifier &lt;new-cluster&gt; --snapshot-identifier &lt;snap&gt; --engine docdb</code> — spins up a full copy of the database. Attacker connects with the original master credentials.</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><strong>Direct Query via MongoDB Driver</strong></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">With network access and valid credentials, an attacker uses <code>mongosh</code> or any MongoDB driver to connect on port 27017 and run <code>db.collection.find()</code> to extract documents directly.</td></tr></table><p>---</p></div>
       <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateDBClusterSnapshot - potential exfiltration precursor</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyDBClusterSnapshotAttribute - sharing changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CopyDBClusterSnapshot - snapshot copied</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyDBCluster - deletion protection/backup changes</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ModifyDBClusterParameterGroup - tls/audit changes</li></ul><h4 style="color: #4ade80;">Audit Log Indicators</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual query patterns or bulk data access</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Failed authentication attempts</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New database user creation</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Large collection scans or regex-based queries</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Connections from unexpected source IPs</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Share Snapshot to Attacker Account</div>
-          <pre><code>aws docdb modify-db-cluster-snapshot-attribute \
-  --db-cluster-snapshot-identifier &lt;snap&gt; \
-  --attribute-name restore \
-  --values-to-add &lt;attacker-account-id&gt;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Make Snapshot Public</div>
-          <pre><code>aws docdb modify-db-cluster-snapshot-attribute \
-  --db-cluster-snapshot-identifier &lt;snap&gt; \
-  --attribute-name restore \
-  --values-to-add all</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable TLS via Parameter Group</div>
-          <pre><code>aws docdb modify-db-cluster-parameter-group \
-  --db-cluster-parameter-group-name my-params \
-  --parameters &quot;ParameterName=tls,ParameterValue=disabled,ApplyMethod=pending-reboot&quot;</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable Deletion Protection</div>
-          <pre><code>aws docdb modify-db-cluster \
-  --db-cluster-identifier my-cluster \
-  --no-deletion-protection</code></pre>
-        </div></div></div>
+        <h3 style="color: #4ade80;">🛡️ Detection — CloudTrail Events to Monitor</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #4ade8055;color:#4ade80;">Event</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #4ade8055;color:#4ade80;">Significance</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>CreateDBClusterSnapshot</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Manual snapshot creation — potential precursor to exfiltration</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>ModifyDBClusterSnapshotAttribute</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Snapshot sharing changed — check if shared publicly or to unknown accounts</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>CopyDBClusterSnapshot</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Snapshot copied — check target region and KMS key</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>RestoreDBClusterFromSnapshot</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">New cluster from snapshot — verify this is authorized</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>ModifyDBCluster</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Check for deletion protection disabled, backup retention reduced</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>ModifyDBClusterParameterGroup</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Check for <code>tls=disabled</code> or <code>audit_logs=disabled</code></td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>DeleteDBCluster</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Cluster deletion — verify deletion protection was properly enforced</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>CreateDBInstance</code> (with docdb engine)</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">New instance added — could indicate unauthorized scaling or access</td></tr></table><p>---</p></div>
+      <div class="panel" style="border-color: #ec489933;">
+        <h3 style="color: #ec4899;">Key DocumentDB Cluster Parameters Reference</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Parameter</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Default</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Allowed Values</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Type</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>tls</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">enabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">disabled, enabled, fips-140-3, tls1.2+, tls1.3+</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Static</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>audit_logs</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">disabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">enabled, disabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>profiler</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">disabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">enabled, disabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>profiler_threshold_ms</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">100</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">50 - 2147483646</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>profiler_sampling_rate</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">1.0</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">0.0 - 1.0</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>change_stream_log_retention_duration</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">10800</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">3600 - 604800</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);"><code>ttl_monitor</code></td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">enabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">enabled, disabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Dynamic</td></tr></table><p><strong>Static parameters</strong> require a manual reboot of every instance in the cluster to take effect.</p><p>---</p></div>
+      <div class="panel" style="border-color: #ec489933;">
+        <h3 style="color: #ec4899;">Security Hub Controls Summary</h3><table style="width:100%;border-collapse:collapse;margin:0.5rem 0;font-size:0.9rem;"><tr><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Control</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Check</th><th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:2px solid #ec489955;color:#ec4899;">Severity</th></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.1</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Encryption at rest enabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Medium</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.2</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Backup retention &gt;= 7 days</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Medium</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.3</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Manual snapshots not public</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Critical</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.4</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Audit logs exported to CloudWatch</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Medium</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.5</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Deletion protection enabled</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Medium</td></tr><tr><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">DocumentDB.6</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">TLS encryption in transit enforced</td><td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Medium</td></tr></table></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full RDS/DocumentDB Access</span>
+            <span style="color: #f87171; font-weight: 600;">Bad Policy — Overly Permissive</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;rds:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
-}</code></pre>
-          <p class="policy-desc">DocumentDB uses rds: namespace. Grants full control including snapshots, sharing, deletion, and parameter changes.</p>
-        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
-          <div class="policy-header">
-            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
-          </div>
-          <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;rds:DescribeDBClusters&quot;,
-    &quot;rds:DescribeDBInstances&quot;,
-    &quot;rds:DescribeDBClusterSnapshots&quot;,
-    &quot;rds:ListTagsForResource&quot;
-  ],
-  &quot;Resource&quot;: &quot;arn:aws:rds:*:*:cluster:my-docdb-*&quot;
-}</code></pre>
-          <p class="policy-desc">Read-only access scoped to specific DocumentDB clusters</p>
-        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
-          <div class="policy-header">
-            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Deny Dangerous Actions</span>
-          </div>
-          <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: &quot;rds:ModifyDBClusterSnapshotAttribute&quot;,
-  &quot;Resource&quot;: &quot;*&quot;,
-  &quot;Condition&quot;: {
-    &quot;StringEquals&quot;: {
-      &quot;rds:AddRestoreAccountId&quot;: &quot;all&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: &quot;rds:*&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
     }
-  }
+  ]
 }</code></pre>
-          <p class="policy-desc">Prevents making DocumentDB snapshots public</p>
+          <p class="policy-desc"><strong>Why this is dangerous:</strong> DocumentDB uses the <code>rds:</code> IAM action namespace. Granting <code>rds:*</code> gives full control over all RDS and DocumentDB resources — including creating snapshots, sharing them publicly, disabling deletion protection, and deleting clusters.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Good Policy — Least Privilege Read-Only</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;rds:DescribeDBClusters&quot;,
+        &quot;rds:DescribeDBInstances&quot;,
+        &quot;rds:DescribeDBClusterParameters&quot;,
+        &quot;rds:DescribeDBClusterSnapshots&quot;,
+        &quot;rds:DescribeDBClusterSnapshotAttributes&quot;,
+        &quot;rds:DescribeDBSubnetGroups&quot;,
+        &quot;rds:ListTagsForResource&quot;
+      ],
+      &quot;Resource&quot;: &quot;arn:aws:rds:*:123456789012:cluster:my-docdb-*&quot;
+    }
+  ]
+}</code></pre>
+          <p class="policy-desc"></p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Deny Dangerous Actions — Guardrail Policy</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;DenyDocDBSnapshotPublicSharing&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: &quot;rds:ModifyDBClusterSnapshotAttribute&quot;,
+      &quot;Resource&quot;: &quot;arn:aws:rds:*:*:cluster-snapshot:*&quot;
+    }
+  ]
+}</code></pre>
+          <p class="policy-desc"></p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enforce TLS with Minimum Version</h4>
-              <p>Use custom parameter group with tls=tls1.2+ or tls=tls1.3+. Never use tls=enabled (allows TLS 1.0).</p>
+              <p>Use a custom parameter group with <code>tls=tls1.2+</code> or <code>tls=tls1.3+</code>. Never use <code>tls=enabled</code> (allows TLS 1.0). Reboot all instances after changing this static parameter.</p>
               <pre><code>aws docdb modify-db-cluster-parameter-group \
-  --db-cluster-parameter-group-name my-params \
+  --db-cluster-parameter-group-name my-docdb-params \
   --parameters &quot;ParameterName=tls,ParameterValue=tls1.2+,ApplyMethod=pending-reboot&quot;</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Full Audit Logging</h4>
-              <p>Enable DDL and DML auditing and export to CloudWatch Logs.</p>
+              <p>Enable DDL and DML auditing and export to CloudWatch Logs:</p>
               <pre><code>aws docdb modify-db-cluster-parameter-group \
-  --db-cluster-parameter-group-name my-params \
+  --db-cluster-parameter-group-name my-docdb-params \
   --parameters &quot;ParameterName=audit_logs,ParameterValue=enabled,ApplyMethod=immediate&quot;</code></pre>
+              <pre><code>aws docdb modify-db-cluster \
+  --db-cluster-identifier my-cluster \
+  --cloudwatch-logs-export-configuration '{&quot;EnableLogTypes&quot;:[&quot;audit&quot;,&quot;profiler&quot;]}'</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6E1;&#xFE0F;</span>
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Enable Profiler for Slow Query Detection</h4>
+              <p></p>
+              <pre><code>aws docdb modify-db-cluster-parameter-group \
+  --db-cluster-parameter-group-name my-docdb-params \
+  --parameters &quot;ParameterName=profiler,ParameterValue=enabled,ApplyMethod=immediate&quot; \
+               &quot;ParameterName=profiler_threshold_ms,ParameterValue=100,ApplyMethod=immediate&quot;</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Deletion Protection</h4>
-              <p>Prevent accidental or malicious cluster deletion.</p>
-              <pre><code>aws docdb modify-db-cluster --db-cluster-identifier my-cluster --deletion-protection</code></pre>
+              <p></p>
+              <pre><code>aws docdb modify-db-cluster \
+  --db-cluster-identifier my-cluster \
+  --deletion-protection</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Block Public Snapshot Sharing via SCP</h4>
-              <p>Apply SCP to deny ModifyDBClusterSnapshotAttribute with values-to-add all at org level.</p>
+              <p>Apply this Service Control Policy at the AWS Organizations level:</p>
+              <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;DenyPublicDocDBSnapshots&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: &quot;rds:ModifyDBClusterSnapshotAttribute&quot;,
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
+}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Use Customer Managed KMS Keys</h4>
-              <p>Create clusters with CMK (not aws/rds) to enable custom key policies and cross-account control.</p>
+              <p>Create clusters with a customer managed KMS key (not the default <code>aws/rds</code> key) to enable custom key policies and cross-account access control for encrypted snapshots.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F504;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Rotate Master Credentials via Secrets Manager</h4>
-              <p>Configure Secrets Manager automatic rotation. Never embed credentials in application code.</p>
+              <p>Configure Secrets Manager automatic rotation for the DocumentDB master password. Do not embed credentials in application code.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Restrict Security Group Access</h4>
+              <p>Limit inbound port 27017 to specific application security groups only. Do not use CIDR-based rules within the VPC.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Set Backup Retention to at Least 7 Days</h4>
+              <p></p>
+              <pre><code>aws docdb modify-db-cluster \
+  --db-cluster-identifier my-cluster \
+  --backup-retention-period 7</code></pre>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Deploy AWS Config Rules</h4>
+              <p>Enable the following AWS Config managed rules: - <code>docdb-cluster-audit-logging-enabled</code> - <code>docdb-cluster-snapshot-public-prohibited</code> - <code>docdb-cluster-encryption-enabled</code> (custom rule or Security Hub control DocumentDB.1)</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon DocumentDB Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Security Card — Amazon DocumentDB | Toc Consulting | tocconsulting.fr</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

@@ -263,7 +263,7 @@
         <span class="header-title">Amazon Lightsail Security</span>
         <span class="header-badge">COMPUTE</span>
       </div>
-      <p class="header-desc">Amazon Lightsail provides simplified virtual private servers, managed databases, object storage, and container services. Its simplified interface masks real security risks: default SSH keys shared across all instances in a region, firewall rules open to 0.0.0.0/0 by default, and forgotten instances running unpatched software.</p>
+      <p class="header-desc">Amazon Lightsail provides simplified virtual private servers, managed databases, object storage, and container services with a built-in firewall. Its simplified interface masks real security risks: default SSH keys shared across all instances in a region, firewall rules open to 0.0.0.0/0 by default, and forgotten instances running unpatched software are common attack surfaces.</p>
     </div>
   </div>
 </div>
@@ -283,24 +283,24 @@
           <div class="stat-label">Firewall</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">Default + Custom</div>
+          <div class="stat-value" style="color: #c084fc;">Default + Custom Keys</div>
           <div class="stat-label">Key Mgmt</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#f59e0b;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#f59e0b;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
           <h4 style="color: #f59e0b;">Instance Firewall</h4>
-          <p>Each instance has IPv4 and IPv6 firewalls controlling inbound traffic only (allow, no deny). Default blueprints ship with SSH (22) and HTTP (80) open to all IPs. All outbound traffic allowed.</p>
+          <p>Each Lightsail instance has two independent firewalls (IPv4 and IPv6) that control inbound traffic only. Rules are permissive-only (allow, no deny). All outbound traffic is allowed by default. Default blueprints ship with SSH (22) and HTTP (80) open to all IP addresses. Windows blueprints additionally open RDP (3389), and CMS blueprints (WordPress, etc.) additionally open HTTPS (443).</p>
           <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Default firewall rules expose SSH to 0.0.0.0/0 on every Linux instance at creation. When multiple rules exist for the same port, the most permissive rule wins.</div>
-        </div>
-        <div>
+        </div><div>
           <h4 style="color: #f59e0b;">Default SSH Keys and Access</h4>
-          <p>Lightsail creates one default SSH key pair per AWS Region. The private key is downloadable via console or CLI. Every instance in the region uses this same default key unless overridden.</p>
+          <p>Lightsail creates one default SSH key pair per AWS Region. The private key is stored by AWS and can be downloaded via the console or CLI (<code>download-default-key-pair</code>). Every instance in that region uses this same default key unless overridden. The <code>get-instance-access-details</code> API returns temporary SSH private keys and RDP passwords.</p>
           <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Anyone with Lightsail API access can download the regional default private key or request temporary SSH credentials, gaining shell access to every instance using that key.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,17 +315,17 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Lightsail instances are frequently deployed by non-security-focused teams, left unmonitored, and forgotten. Default SSH keys shared per region, permissive default firewall rules, IMDSv1 enabled by default on most blueprints, and limited CloudTrail visibility make Lightsail a high-value target.</p>
+  <p class="risk-desc">Lightsail instances are frequently deployed by non-security-focused teams, left unmonitored, and forgotten. The combination of default SSH keys shared per region, permissive default firewall rules, no VPC-level network ACLs, IMDSv1 enabled by default on most blueprints (except Amazon Linux 2023 and Ubuntu 24, which default to IMDSv2), and limited CloudTrail visibility makes Lightsail a high-value target for lateral movement.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Credential &amp; Key Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download regional default SSH key via API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve temporary SSH keys via get-instance-access-details</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve RDP admin password for Windows instances</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve database master password via API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to IMDS (IMDSv1 enabled by default on most blueprints)</li></ul><h4 style="color: #f87171;">Instance &amp; Network Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Brute-force SSH on default open port 22</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit unpatched blueprint apps (WordPress, LAMP)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse exported snapshots with residual SSH keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Pivot from peered VPC (firewall bypassed on private IP)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access forgotten/abandoned instances</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Credential &amp; Key Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download regional default SSH key via API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve temporary SSH keys via <code>get-instance-access-details</code></li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve RDP admin password for Windows instances</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Retrieve database master password via <code>get-relational-database-master-user-password</code></li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to IMDS (IMDSv1 enabled by default on most blueprints; Amazon Linux 2023 and Ubuntu 24 default to IMDSv2)</li></ul><h4 style="color: #f87171;">Instance &amp; Network Exploitation</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Brute-force SSH on default open port 22</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit unpatched blueprint applications (WordPress, LAMP, Node.js)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse exported snapshots containing residual SSH keys</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Pivot from peered VPC (firewall rules do not apply to private IP traffic)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access forgotten/abandoned instances running outdated software</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Firewall &amp; Network</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SSH (22) or RDP (3389) open to 0.0.0.0/0 (default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No source IP restriction on admin ports</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> All outbound traffic allowed (no egress filtering)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IPv6 firewall rules not configured separately</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC flow logs (managed VPC)</li></ul><h4 style="color: #fb923c;">Instance &amp; Data</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled on most blueprints (default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using shared default key instead of per-instance custom keys</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Automatic snapshots not enabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Database publicly accessible with default credentials</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Exported snapshots retain residual Lightsail SSH keys</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Firewall &amp; Network</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> SSH (22) or RDP (3389) open to 0.0.0.0/0 (default)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No source IP restriction on administrative ports</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> All outbound traffic allowed (no egress filtering possible)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IPv6 firewall rules not configured (separate from IPv4)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No VPC flow logs (Lightsail VPC is managed, not user-accessible)</li></ul><h4 style="color: #fb923c;">Instance &amp; Data</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled on most blueprints (http-tokens set to optional by default; Amazon Linux 2023 and Ubuntu 24 default to required)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using shared default key pair instead of per-instance custom keys</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Automatic snapshots not enabled (no recovery from ransomware)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Database publicly accessible with default master credentials</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Exported snapshots to EC2 retain residual Lightsail SSH keys</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All Instances</div>
           <pre><code>aws lightsail get-instances</code></pre>
         </div><div class="cmd-block">
@@ -333,153 +333,215 @@
           <pre><code>aws lightsail get-instance-port-states \
   --instance-name my-instance</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Download Regional Default SSH Key</div>
+          <div class="cmd-title">Download Regional Default SSH Key Pair</div>
           <pre><code>aws lightsail download-default-key-pair</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Get Temporary SSH Access Credentials</div>
           <pre><code>aws lightsail get-instance-access-details \
   --instance-name my-instance --protocol ssh</code></pre>
         </div><div class="cmd-block">
+          <div class="cmd-title">List All Instance Snapshots</div>
+          <pre><code>aws lightsail get-instance-snapshots</code></pre>
+        </div><div class="cmd-block">
           <div class="cmd-title">List All Databases</div>
           <pre><code>aws lightsail get-relational-databases</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Database Master Password</div>
+          <pre><code>aws lightsail get-relational-database-master-user-password \
+  --relational-database-name my-db</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List All Key Pairs</div>
+          <pre><code>aws lightsail get-key-pairs</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Check VPC Peering Status</div>
+          <pre><code>aws lightsail is-vpc-peered</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Object Storage Buckets</div>
+          <pre><code>aws lightsail get-buckets</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">From API Access to Instance Shell</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> download-default-key-pair to get regional private key</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> get-instance-access-details for temporary SSH credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> get-relational-database-master-user-password for DB access</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> open-instance-public-ports to expose services</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> export-snapshot to EC2 for data extraction</li></ul><h4 style="color: #c084fc;">From Instance Shell to AWS Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Query IMDS for IAM role credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Read application config files with AWS access keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot to peered VPC resources via private IP</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create instance snapshots for exfiltration</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access other instances via shared default key</li></ul><div class="note"><strong>Key insight:</strong> download-default-key-pair and get-instance-access-details are uniquely dangerous -- they directly return SSH private keys and passwords, unlike EC2.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Instance-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain SSH access via default or custom key</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Plant backdoors on instance filesystems</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Install cron jobs for persistent access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create snapshots for future restoration</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify firewall rules for continued network access</li></ul><h4 style="color: #facc15;">Account-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Exfiltrate credentials for out-of-band access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Export snapshots to EC2 for offline analysis</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional instances as backup access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain database credentials for data access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Peer VPC for persistent network path</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DownloadDefaultKeyPair - SSH key downloaded</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> GetInstanceAccessDetails - temporary creds requested</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> OpenInstancePublicPorts - firewall opened</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutInstancePublicPorts - firewall rules replaced</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> ExportSnapshot - snapshot exported to EC2</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Key downloads from unusual principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Firewall modifications adding broad access</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Database password retrieval from unexpected sources</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Instance access details requested frequently</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Snapshot exports to unknown regions</li></ul></div></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">From Lightsail API Access to Instance Shell</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use <code>download-default-key-pair</code> to get the regional private key, then SSH into any instance using that default key</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use <code>get-instance-access-details</code> to obtain temporary SSH credentials for any instance</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Use <code>get-relational-database-master-user-password</code> to retrieve database admin credentials</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Open new firewall ports via <code>open-instance-public-ports</code> to expose services</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Export instance snapshot to EC2 via <code>export-snapshot</code>, then mount the volume to extract data</li></ul><h4 style="color: #c084fc;">From Instance Shell to AWS Account</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Query IMDS at 169.254.169.254 for IAM role credentials (if IMDSv1 is enabled)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Read application configuration files containing AWS access keys</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Pivot to peered VPC resources via private IP (bypasses Lightsail firewall)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create instance snapshots containing sensitive data for later exfiltration</li></ul><div class="note"><strong>Key insight:</strong> Lightsail's <code>download-default-key-pair</code> and <code>get-instance-access-details</code> are uniquely dangerous APIs -- they directly return SSH private keys and passwords, unlike EC2 which requires the original key pair to decrypt Windows passwords.</div></div></div>
 
 <!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Download Default Key and SSH In</div>
+<div class="section"><h2><span style="color:#f87171;">💻</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
+          <div class="cmd-title">Download Default Key and SSH into Instance</div>
           <pre><code>aws lightsail download-default-key-pair \
   --query 'privateKeyBase64' --output text &gt; lightsail-key.pem
 chmod 600 lightsail-key.pem
-ssh -i lightsail-key.pem ubuntu@&lt;instance-ip&gt;</code></pre>
+ssh -i lightsail-key.pem ubuntu@&lt;instance-public-ip&gt;</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Open All Ports on an Instance</div>
           <pre><code>aws lightsail open-instance-public-ports \
   --instance-name my-instance \
   --port-info fromPort=0,toPort=65535,protocol=all</code></pre>
         </div><div class="cmd-block">
+          <div class="cmd-title">Replace All Firewall Rules (Close Everything Except Attacker Access)</div>
+          <pre><code>aws lightsail put-instance-public-ports \
+  --instance-name my-instance \
+  --port-infos '[{&quot;fromPort&quot;:22,&quot;toPort&quot;:22,&quot;protocol&quot;:&quot;tcp&quot;,&quot;cidrs&quot;:[&quot;ATTACKER_IP/32&quot;]}]'</code></pre>
+        </div><div class="cmd-block">
           <div class="cmd-title">Retrieve Database Master Password</div>
           <pre><code>aws lightsail get-relational-database-master-user-password \
   --relational-database-name my-db \
   --password-version CURRENT</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Export Snapshot to EC2</div>
+          <div class="cmd-title">Export Snapshot to EC2 for Data Exfiltration</div>
           <pre><code>aws lightsail export-snapshot \
   --source-snapshot-name my-instance-snapshot</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Get Temporary RDP Credentials for Windows Instance</div>
+          <pre><code>aws lightsail get-instance-access-details \
+  --instance-name my-windows-instance --protocol rdp</code></pre>
         </div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
             <span style="color: #f87171; font-weight: 600;">Dangerous - Full Lightsail Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;lightsail:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;lightsail:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Grants access to download SSH keys, retrieve database passwords, modify firewalls, and delete all resources</p>
+          <p class="policy-desc">Grants access to download SSH keys, retrieve database passwords, modify firewall rules, and delete all resources</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
             <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only Monitoring</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;lightsail:GetInstances&quot;,
-    &quot;lightsail:GetInstanceState&quot;,
-    &quot;lightsail:GetInstancePortStates&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;lightsail:GetInstances&quot;,
+      &quot;lightsail:GetInstanceState&quot;,
+      &quot;lightsail:GetInstancePortStates&quot;,
+      &quot;lightsail:GetInstanceMetricData&quot;,
+      &quot;lightsail:GetRelationalDatabases&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Read-only monitoring -- cannot download keys, open ports, or modify resources</p>
+          <p class="policy-desc">Read-only access for monitoring -- cannot download keys, open ports, or modify resources</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous - Allows Key Download and Credential Retrieval</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;lightsail:DownloadDefaultKeyPair&quot;,
+      &quot;lightsail:GetInstanceAccessDetails&quot;,
+      &quot;lightsail:GetRelationalDatabaseMasterUserPassword&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">These three actions alone grant SSH/RDP access to all instances and database admin access</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
             <span style="color: #4ade80; font-weight: 600;">Secure - Deny Credential Retrieval</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Deny&quot;,
-  &quot;Action&quot;: [
-    &quot;lightsail:DownloadDefaultKeyPair&quot;,
-    &quot;lightsail:GetInstanceAccessDetails&quot;,
-    &quot;lightsail:GetRelationalDatabaseMasterUserPassword&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Action&quot;: [
+      &quot;lightsail:DownloadDefaultKeyPair&quot;,
+      &quot;lightsail:GetInstanceAccessDetails&quot;,
+      &quot;lightsail:GetRelationalDatabaseMasterUserPassword&quot;,
+      &quot;lightsail:OpenInstancePublicPorts&quot;,
+      &quot;lightsail:PutInstancePublicPorts&quot;
+    ],
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Prevents credential theft and firewall modification -- the most dangerous Lightsail actions</p>
+          <p class="policy-desc">Explicit deny on the most dangerous Lightsail actions -- prevents credential theft and firewall modification</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enforce IMDSv2</h4>
-              <p>Require session tokens for IMDS access on all Lightsail instances.</p>
+              <p>Require session tokens for IMDS access on all Lightsail instances to block SSRF-based credential theft.</p>
               <pre><code>aws lightsail update-instance-metadata-options \
   --instance-name my-instance \
-  --http-tokens required --http-endpoint enabled</code></pre>
+  --http-tokens required \
+  --http-endpoint enabled</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F310;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Restrict SSH to Known IPs</h4>
-              <p>Replace default all-IPs SSH rule with source IP restrictions.</p>
-              <pre><code>aws lightsail put-instance-public-ports --instance-name my-instance \
-  --port-infos '[{"fromPort":22,"toPort":22,"protocol":"tcp","cidrs":["203.0.113.0/24"]}]'</code></pre>
+              <p>Replace the default &quot;all IPs&quot; SSH rule with source IP restrictions. Use <code>put-instance-public-ports</code> to replace all rules atomically.</p>
+              <pre><code>aws lightsail put-instance-public-ports \
+  --instance-name my-instance \
+  --port-infos '[{&quot;fromPort&quot;:22,&quot;toPort&quot;:22,&quot;protocol&quot;:&quot;tcp&quot;,&quot;cidrs&quot;:[&quot;203.0.113.0/24&quot;]},{&quot;fromPort&quot;:443,&quot;toPort&quot;:443,&quot;protocol&quot;:&quot;tcp&quot;,&quot;cidrs&quot;:[&quot;0.0.0.0/0&quot;]}]'</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Use Custom Key Pairs</h4>
-              <p>Create per-instance or per-team custom key pairs. Stop using the shared regional default key.</p>
+              <h4>Use Custom Key Pairs Instead of Default</h4>
+              <p>Create per-instance or per-team custom key pairs and stop using the shared regional default key.</p>
               <pre><code>aws lightsail create-key-pair --key-pair-name prod-web-key</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4F8;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Automatic Snapshots</h4>
               <p>Protect against ransomware and accidental deletion with daily automatic snapshots.</p>
-              <pre><code>aws lightsail enable-add-on --resource-name my-instance \
+              <pre><code>aws lightsail enable-add-on \
+  --resource-name my-instance \
   --add-on-request addOnType=AutoSnapshot,autoSnapshotAddOnRequest={snapshotTimeOfDay=06:00}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Deny Dangerous API Actions via IAM</h4>
-              <p>Explicitly deny DownloadDefaultKeyPair, GetInstanceAccessDetails, and GetRelationalDatabaseMasterUserPassword.</p>
+              <p>Apply an explicit deny SCP or IAM policy on <code>DownloadDefaultKeyPair</code>, <code>GetInstanceAccessDetails</code>, and <code>GetRelationalDatabaseMasterUserPassword</code> for all users who do not need direct instance access.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F50D;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Audit and Decommission Forgotten Instances</h4>
-              <p>Regularly enumerate all Lightsail instances across all regions. They do not appear in EC2 console.</p>
+              <p>Regularly enumerate all Lightsail instances across all regions. Lightsail resources do not appear in EC2 console, making them easy to overlook.</p>
+              <pre><code>for region in $(aws lightsail get-regions --query 'regions[].name' --output text); do
+  echo &quot;=== $region ===&quot;
+  aws lightsail get-instances --region &quot;$region&quot; \
+    --query 'instances[].{Name:name,State:state.name,IP:publicIpAddress,Created:createdAt}'
+done</code></pre>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon Lightsail Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Lightsail Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

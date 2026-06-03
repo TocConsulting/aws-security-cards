@@ -186,9 +186,9 @@ aws network-firewall update-rule-group \\
 ```bash
 aws network-firewall update-rule-group \\
   --rule-group-arn ARN \\
-  --rules-source-list Targets=[".attacker.com"],
-    TargetTypes=["HTTP_HOST","TLS_SNI"],
-    GeneratedRulesType=ALLOWLIST
+  --update-token TOKEN \\
+  --type STATEFUL \\
+  --rule-group '{"RulesSource":{"RulesSourceList":{"Targets":[".attacker.com"],"TargetTypes":["HTTP_HOST","TLS_SNI"],"GeneratedRulesType":"ALLOWLIST"}}}' 
 ```
 
 **Disable Logging**

@@ -389,9 +389,9 @@
           <div class="cmd-title">Add Domain Exception</div>
           <pre><code>aws network-firewall update-rule-group \\
   --rule-group-arn ARN \\
-  --rules-source-list Targets=[&quot;.attacker.com&quot;],
-    TargetTypes=[&quot;HTTP_HOST&quot;,&quot;TLS_SNI&quot;],
-    GeneratedRulesType=ALLOWLIST</code></pre>
+  --update-token TOKEN \\
+  --type STATEFUL \\
+  --rule-group '{&quot;RulesSource&quot;:{&quot;RulesSourceList&quot;:{&quot;Targets&quot;:[&quot;.attacker.com&quot;],&quot;TargetTypes&quot;:[&quot;HTTP_HOST&quot;,&quot;TLS_SNI&quot;],&quot;GeneratedRulesType&quot;:&quot;ALLOWLIST&quot;}}}' </code></pre>
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Disable Logging</div>

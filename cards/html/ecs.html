@@ -377,7 +377,7 @@ $AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</code></pre>
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Get Task Metadata (from container)</div>
-          <pre><code>curl http://169.254.170.2/v4/metadata</code></pre>
+          <pre><code>curl ${ECS_CONTAINER_METADATA_URI_V4}/task</code></pre>
         </div>
         <div class="cmd-block">
           <div class="cmd-title">Steal Task Credentials (from container)</div>

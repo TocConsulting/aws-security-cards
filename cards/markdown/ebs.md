@@ -274,7 +274,7 @@ aws dlm create-lifecycle-policy \\
 Alert on unencrypted volumes and public snapshots.
 
 ```bash
-ec2-ebs-encryption-by-default, ec2-snapshot-public-restorable-check
+ec2-ebs-encryption-by-default, ebs-snapshot-public-restorable-check
 ```
 
 ---

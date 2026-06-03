@@ -308,12 +308,15 @@ Never allow privileged mode in job definitions. Use SCP to deny.
 
 ### 🚫 Require IMDSv2
 
-Configure compute environments to require IMDSv2, preventing simple credential theft.
+Enforce IMDSv2 through the launch template referenced by the compute environment (HttpTokens=required). The ec2Configuration AMI override alone does NOT enforce IMDSv2.
 
 ```bash
-aws batch update-compute-environment \\
-  --compute-environment prod-env \\
-  --compute-resources 'ec2Configuration=[{imageIdOverride=ami-xxx}]'
+aws ec2 create-launch-template \\
+  --launch-template-name batch-imdsv2 \\
+  --launch-template-data \\
+  '{"MetadataOptions":{"HttpTokens":"required","HttpPutResponseHopLimit":1}}'
+# Then set computeResources.launchTemplate to batch-imdsv2
+# in the Batch compute environment
 ```
 
 ### 🔒 Use Fargate for Isolation

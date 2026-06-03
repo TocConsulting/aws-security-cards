@@ -263,7 +263,7 @@
         <span class="header-title">Amazon Verified Permissions Security</span>
         <span class="header-badge">IDENTITY</span>
       </div>
-      <p class="header-desc">Amazon Verified Permissions is a fully managed, fine-grained authorization service for custom applications. It uses the Cedar policy language to define permissions and make authorization decisions. Applications call IsAuthorized to evaluate Cedar policies stored in a policy store.</p>
+      <p class="header-desc">Amazon Verified Permissions is a fully managed, fine-grained authorization service for custom applications. It uses the Cedar policy language to define permissions and make authorization decisions. Applications call the IsAuthorized or IsAuthorizedWithToken API to evaluate Cedar policies stored in a policy store and receive Allow or Deny decisions.</p>
     </div>
   </div>
 </div>
@@ -271,7 +271,7 @@
 <!-- Stats -->
 <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-value" style="color: #f59e0b;">MEDIUM</div>
+          <div class="stat-value" style="color: #f87171;">MEDIUM</div>
           <div class="stat-label">Risk Level</div>
         </div>
         <div class="stat-card">
@@ -288,19 +288,23 @@
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#a855f7;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#a855f7;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
-          <h4 style="color: #a855f7;">Policy Stores &amp; Cedar Policies</h4>
-          <p>Policy stores hold Cedar policies, schemas, and identity sources. Cedar uses explicit permit and forbid effects with default-deny. Any forbid match results in Deny; else any permit match results in Allow; otherwise Deny.</p>
-          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> An overly broad permit(principal, action, resource) with no conditions allows any authenticated user to perform any action on any resource -- the Cedar equivalent of IAM Allow *.</div>
-        </div>
-        <div>
-          <h4 style="color: #a855f7;">Identity Sources &amp; Integration</h4>
-          <p>Identity sources connect Cognito user pools or OIDC providers to policy stores. IsAuthorizedWithToken accepts ID/access tokens directly and maps claims to Cedar entities.</p>
-          <div class="attack-note"><span style="color:#a855f7;">Attack note:</span> If an attacker can inject Cedar policies via CreatePolicy, they can create permit(principal, action, resource) granting themselves full access to every application resource.</div>
+          <h4 style="color: #a855f7;">Policy Stores</h4>
+          <p>Central containers for Cedar policies, schemas, and identity sources. Each policy store holds static policies, template-linked policies, and policy templates. Policy stores support STRICT or OFF validation modes that determine whether policies are validated against the schema before being accepted.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Key components:</span> Static policies, policy templates, template-linked policies, schemas, identity sources, validation settings</div>
+        </div><div>
+          <h4 style="color: #a855f7;">Cedar Policies and Authorization</h4>
+          <p>Cedar is an open-source policy language with explicit <code>permit</code> and <code>forbid</code> effects. Authorization follows default-deny: if any <code>forbid</code> policy matches, the result is Deny; else if any <code>permit</code> policy matches, the result is Allow; otherwise the result is Deny. Policies define a principal, action, and resource scope with optional <code>when</code> and <code>unless</code> conditions.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Key components:</span> permit/forbid effects, principal/action/resource scope, when/unless conditions, entity hierarchy, schema validation</div>
+        </div><div>
+          <h4 style="color: #a855f7;">Identity Sources (Cognito and OIDC Integration)</h4>
+          <p>Identity sources connect external identity providers (Amazon Cognito user pools or custom OIDC providers) to a policy store. The IsAuthorizedWithToken API accepts ID or access tokens directly and maps token claims to Cedar entity attributes for policy evaluation.</p>
+          <div class="attack-note"><span style="color:#a855f7;">Key components:</span> Cognito user pool integration, OIDC provider support, token-to-entity mapping, client/audience validation</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,25 +319,29 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Verified Permissions is an application-layer authorization service. It does not directly control AWS resources. However, misconfigurations in Cedar policies, schemas, or identity source mappings can lead to authorization bypass in the applications that rely on it.</p>
+  <p class="risk-desc">Verified Permissions is an application-layer authorization service. It does not directly control AWS resource access (that is IAM's role). However, misconfigurations in Cedar policies, schemas, or identity source mappings can lead to authorization bypass in the applications that rely on it. The primary risks are overly permissive Cedar policies, disabled schema validation, and flawed policy logic that grants unintended access.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Cedar Policy Logic Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit gaps between permit and missing forbid policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse wildcard scopes in Cedar policies</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Principal identifier reuse (human-readable vs UUID)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Overly broad policy templates when instantiated</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Missing unless conditions on permit policies</li></ul><h4 style="color: #f87171;">Infrastructure Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate policies and schemas to map auth model</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Tamper with identity source token claims</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit disabled schema validation (mode=OFF)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject policies via verifiedpermissions:CreatePolicy</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Bypass Verified Permissions if app skips IsAuthorized</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Cedar Policy Logic Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Craft requests that exploit gaps between <code>permit</code> policies and missing <code>forbid</code> policies to gain access to unintended resources</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse overly broad wildcard scopes in Cedar policies (e.g., <code>permit(principal, action, resource)</code> with no conditions) to access any resource</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit principal identifier reuse when human-readable names are used instead of UUIDs, inheriting permissions of a former user</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse template-linked policies with overly broad templates that grant excessive permissions when instantiated</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit missing <code>unless</code> conditions on <code>permit</code> policies to bypass intended restrictions (e.g., time-based or IP-based limits)</li></ul><h4 style="color: #f87171;">Infrastructure and Integration Attacks</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate policy stores, policies, and schemas via IAM permissions to map the entire authorization model before targeting specific gaps</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Tamper with identity source token claims if token validation is weak, causing Verified Permissions to evaluate policies against attacker-controlled attributes</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Exploit disabled schema validation (mode=OFF) to inject malformed policies that behave unexpectedly during authorization</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse overly permissive IAM policies on <code>verifiedpermissions:CreatePolicy</code> to inject attacker-controlled Cedar policies into a policy store</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Target the application layer to bypass Verified Permissions entirely if the app fails to call IsAuthorized for every access decision</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Cedar Policy Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Schema validation set to OFF in production</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad permit with no constraints</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Human-readable identifiers (User::"jane") instead of UUIDs</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing forbid policies for sensitive actions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Templates with unscoped placeholders</li></ul><h4 style="color: #fb923c;">Infrastructure Issues</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM granting verifiedpermissions:* to app roles</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No separation between read (IsAuthorized) and write (CreatePolicy)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Identity source without client ID restrictions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> CloudTrail data events not enabled for IsAuthorized</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No monitoring on policy store modifications</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Cedar Policy Misconfigurations</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Schema validation set to OFF in production, allowing invalid or malformed policies to be stored without rejection</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Overly broad <code>permit</code> policies with no resource or principal constraints (e.g., <code>permit(principal, action, resource);</code>)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Using human-readable identifiers (e.g., <code>User::&quot;jane&quot;</code>) instead of UUIDs, enabling identifier reuse attacks when users are offboarded</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Missing <code>forbid</code> policies for sensitive actions, relying solely on the absence of <code>permit</code> policies for denial</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Policy templates with unscoped placeholders that generate overly permissive template-linked policies when instantiated</li></ul><h4 style="color: #fb923c;">Infrastructure Misconfigurations</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IAM policies granting <code>verifiedpermissions:*</code> to application roles, allowing policy modification alongside authorization queries</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No separation between IAM permissions for read-only authorization (IsAuthorized) and write operations (CreatePolicy, UpdatePolicy, PutSchema)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Identity source configured without client ID restrictions, accepting tokens from any app client in the Cognito user pool</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> CloudTrail data events not enabled for IsAuthorized and IsAuthorizedWithToken, leaving authorization decisions unaudited</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> No monitoring or alerting on policy store modifications (CreatePolicy, UpdatePolicy, DeletePolicy, PutSchema)</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All Policy Stores</div>
           <pre><code>aws verifiedpermissions list-policy-stores</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">List All Policies in a Store</div>
+          <div class="cmd-title">Get Policy Store Details</div>
+          <pre><code>aws verifiedpermissions get-policy-store \
+  --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List All Policies in a Policy Store</div>
           <pre><code>aws verifiedpermissions list-policies \
   --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Get a Specific Policy</div>
+          <div class="cmd-title">Retrieve a Specific Policy</div>
           <pre><code>aws verifiedpermissions get-policy \
   --policy-store-id PSEXAMPLEabcdefg111111 \
   --policy-id SPEXAMPLEabcdefg111111</code></pre>
@@ -345,82 +353,114 @@
           <div class="cmd-title">List Identity Sources</div>
           <pre><code>aws verifiedpermissions list-identity-sources \
   --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
-        </div></div>
-      <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Cedar Policy Injection</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreatePolicy to inject blanket permit(principal, action, resource)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> UpdatePolicy to widen scope of existing policies</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> PutSchema to add new entity types/actions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Delete forbid policies to weaken controls</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Create template-linked policies with broad templates</li></ul><h4 style="color: #c084fc;">Application-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Principal identifier reuse (inherit former user permissions)</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse Cognito group claims mapped to Cedar entities</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit missing IsAuthorized checks on endpoints</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Probe authorization decisions via IsAuthorized API</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Analyze policies offline to find authorization gaps</li></ul><div class="note"><strong>Key insight:</strong> Enumerate the full policy set with list-policies and get-policy, then analyze Cedar logic offline to find gaps -- actions with no forbid and overly broad permits.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Policy Manipulation</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject persistent permit policies in policy store</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Delete forbid policies that restrict access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify schema to add attacker-controlled entity types</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create template-linked policies from broad templates</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Register identity sources with attacker OIDC provider</li></ul><h4 style="color: #facc15;">Identity-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Reuse identifiers of deleted principals</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Add attacker to Cognito groups mapped to Cedar permissions</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain access via identity source token issuance</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional policy stores for parallel access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify validation to OFF to accept malformed policies</li></ul></div>
-      <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">Management Events (Default)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreatePolicy - new policy added</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeletePolicy - policy removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdatePolicy - policy modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutSchema - schema updated</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateIdentitySource - identity source added</li></ul><h4 style="color: #4ade80;">Data Events (Must Enable)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IsAuthorized - authorization decision requested</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> IsAuthorizedWithToken - token-based auth decision</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> BatchIsAuthorized - batch authorization decisions</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Spike in DENY results (authorization probing)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unusual CreatePolicy from non-pipeline principals</li></ul></div></div>
-
-<!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
-          <div class="cmd-title">Inject Blanket Permit Policy</div>
-          <pre><code>aws verifiedpermissions create-policy \
-  --policy-store-id PSEXAMPLEabcdefg111111 \
-  --definition '{"static":{"statement":"permit(principal, action, resource);","description":"backdoor"}}'</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Delete a Forbid Policy</div>
-          <pre><code>aws verifiedpermissions delete-policy \
+          <div class="cmd-title">Get Identity Source Details</div>
+          <pre><code>aws verifiedpermissions get-identity-source \
   --policy-store-id PSEXAMPLEabcdefg111111 \
-  --policy-id SPEXAMPLEforbid111111</code></pre>
+  --identity-source-id ISEXAMPLEabcdefg111111</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Test Authorization Decision</div>
+          <div class="cmd-title">List Policy Templates</div>
+          <pre><code>aws verifiedpermissions list-policy-templates \
+  --policy-store-id PSEXAMPLEabcdefg111111</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Test an Authorization Decision</div>
           <pre><code>aws verifiedpermissions is-authorized \
   --policy-store-id PSEXAMPLEabcdefg111111 \
-  --principal entityType=User,entityId=attacker \
-  --action actionType=Action,actionId=admin \
-  --resource entityType=Resource,entityId=sensitive</code></pre>
-        </div><div class="cmd-block">
-          <div class="cmd-title">Disable Schema Validation</div>
-          <pre><code>aws verifiedpermissions update-policy-store \
-  --policy-store-id PSEXAMPLEabcdefg111111 \
-  --validation-settings &quot;mode=OFF&quot;</code></pre>
-        </div></div></div>
+  --principal entityType=User,entityId=alice \
+  --action actionType=Action,actionId=view \
+  --resource entityType=Photo,entityId=VacationPhoto94.jpg</code></pre>
+        </div></div>
+      <div class="panel" style="border-color: #c084fc33;">
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Cedar Policy Injection</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> If an attacker gains IAM permission to <code>verifiedpermissions:CreatePolicy</code>, they can inject a <code>permit(principal, action, resource);</code> policy granting themselves full access to every resource in the application</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> If an attacker can <code>verifiedpermissions:UpdatePolicy</code>, they can modify existing policies to add their own principal or widen the resource scope</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> If an attacker can <code>verifiedpermissions:PutSchema</code>, they can alter the schema to add new entity types or actions and then create policies that reference them</li></ul><h4 style="color: #c084fc;">Application-Level Escalation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit principal identifier reuse: if a user named &quot;admin&quot; is deleted and the attacker registers as &quot;admin&quot;, they inherit all policies referencing <code>User::&quot;admin&quot;</code></li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Abuse group membership in Cognito tokens: if group claims are mapped to Cedar entities and group assignment is not tightly controlled, adding oneself to a privileged group grants corresponding Cedar permissions</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Exploit missing authorization checks in the application: if certain endpoints skip the IsAuthorized call, direct access bypasses the entire policy evaluation</li></ul><div class="note"><strong>Key Technique:</strong> Enumerate the full policy set with <code>list-policies</code> and <code>get-policy</code>, then analyze Cedar policy logic offline to find gaps -- actions or resources with no corresponding <code>forbid</code> policy and overly broad <code>permit</code> policies.</div></div>
+      <div class="panel" style="border-color: #a855f733;">
+        <h3 style="color: #a855f7;">🔗 Lateral Movement</h3><h4 style="color: #a855f7;">From Verified Permissions</h4><ul><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Map the full authorization model (policies, schema, identity sources) to understand which application resources are protected and which are not</li><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Use authorization decision testing (IsAuthorized) to probe which principal/action/resource combinations are allowed, identifying over-permissioned paths</li><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Identify identity sources to pivot to the connected Cognito user pool or OIDC provider for further attacks on the identity layer</li><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Analyze policy templates to understand reusable permission patterns and find broadly scoped templates</li></ul><h4 style="color: #a855f7;">Data Exfiltration</h4><ul><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Extract the complete schema to understand all entity types, actions, and relationships in the application</li><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Dump all policies to reverse-engineer the full authorization model and find authorization gaps</li><li><span class="bullet" style="color: #a855f7;">&#x2022;</span> Retrieve identity source configuration to discover connected Cognito user pool ARNs and OIDC provider URLs</li></ul></div>
+      <div class="panel" style="border-color: #4ade8033;">
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Management Events (Logged by Default)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>CreatePolicy</code> - new policy added to a policy store</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>DeletePolicy</code> - policy removed from a policy store</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>UpdatePolicy</code> - existing policy modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>PutSchema</code> - schema created or updated</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>CreatePolicyStore</code> - new policy store created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>DeletePolicyStore</code> - policy store deleted</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>CreateIdentitySource</code> - identity source added</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>DeleteIdentitySource</code> - identity source removed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>CreatePolicyTemplate</code> - policy template created</li></ul><h4 style="color: #4ade80;">CloudTrail Data Events (Must Be Explicitly Enabled)</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>IsAuthorized</code> - authorization decision requested</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>IsAuthorizedWithToken</code> - token-based authorization decision requested</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> <code>BatchIsAuthorized</code> - batch authorization decisions requested</li></ul><div class="note"><strong>Important:</strong> IsAuthorized and IsAuthorizedWithToken are data events and are NOT logged by default. You must explicitly enable data event logging for the <code>verifiedpermissions</code> resource type in your CloudTrail trail or event data store.</div><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Unexpected CreatePolicy or UpdatePolicy events from unusual IAM principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> PutSchema events that change the authorization model outside of normal deployment pipelines</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Spike in IsAuthorized calls returning DENY (possible authorization probing)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DeletePolicy events removing forbid policies (weakening security controls)</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> New identity sources added pointing to external OIDC providers</li></ul></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Verified Permissions Access</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: Unrestricted Cedar Permit Policy</span>
           </div>
-          <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;verifiedpermissions:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
-}</code></pre>
-          <p class="policy-desc">Grants ability to create, modify, and delete policies, schemas, and identity sources -- can rewrite entire auth model</p>
+          <pre><code>permit(principal, action, resource);</code></pre>
+          <p class="policy-desc">This policy allows any principal to perform any action on any resource. It is the Cedar equivalent of <code>&quot;Effect&quot;: &quot;Allow&quot;, &quot;Action&quot;: &quot;*&quot;, &quot;Resource&quot;: &quot;*&quot;</code> in IAM and should never be used.</p>
         </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
           <div class="policy-header">
             <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Application Auth Only</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: Scoped Cedar Permit Policy with Conditions</span>
           </div>
-          <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;verifiedpermissions:IsAuthorized&quot;,
-    &quot;verifiedpermissions:IsAuthorizedWithToken&quot;,
-    &quot;verifiedpermissions:BatchIsAuthorized&quot;
-  ],
-  &quot;Resource&quot;: &quot;arn:aws:verifiedpermissions::*:policy-store/PSEXAMPLEabcdefg111111&quot;
-}</code></pre>
-          <p class="policy-desc">Application role can only make authorization decisions. Cannot modify policies, schemas, or identity sources.</p>
+          <pre><code>permit(
+  principal in UserGroup::&quot;viewers&quot;,
+  action in Action::&quot;readOnly&quot;,
+  resource in Album::&quot;publicPhotos&quot;
+)
+when { context.mfaAuthenticated == true };</code></pre>
+          <p class="policy-desc">This policy restricts access to the &quot;viewers&quot; group, read-only actions, a specific album, and requires MFA authentication in the request context.</p>
         </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Cedar Blanket Permit</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: IAM Policy Granting Full Verified Permissions Access</span>
           </div>
-          <pre><code>permit(principal, action, resource);</code></pre>
-          <p class="policy-desc">Allows any principal to perform any action on any resource. The Cedar equivalent of IAM Allow *.</p>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;verifiedpermissions:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Grants the ability to create, modify, and delete policies, schemas, and identity sources -- an attacker with this role can rewrite the entire authorization model.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: IAM Policy for Read-Only Authorization</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;verifiedpermissions:IsAuthorized&quot;,
+      &quot;verifiedpermissions:IsAuthorizedWithToken&quot;
+    ],
+    &quot;Resource&quot;: &quot;arn:aws:verifiedpermissions::123456789012:policy-store/PSEXAMPLEabcdefg111111&quot;
+  }]
+}</code></pre>
+          <p class="policy-desc">Application role can only make authorization decisions against a specific policy store. Cannot modify policies, schemas, or identity sources.</p>
+        </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+          <div class="policy-header">
+            <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
+            <span style="color: #f87171; font-weight: 600;">Bad: Cedar Policy with Human-Readable Identifier</span>
+          </div>
+          <pre><code>permit(
+  principal == User::&quot;jane&quot;,
+  action,
+  resource
+);</code></pre>
+          <p class="policy-desc">Uses a human-readable name. If &quot;jane&quot; leaves and a new person reuses the name, they inherit all permissions. Use UUIDs instead.</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Good: Cedar Policy with UUID Identifier</span>
+          </div>
+          <pre><code>permit(
+  principal == User::&quot;a1b2c3d4-e5f6-7890-abcd-ef1234567890&quot;,
+  action in Action::&quot;readOnly&quot;,
+  resource in Album::&quot;publicPhotos&quot;
+);</code></pre>
+          <p class="policy-desc">Uses a UUID for the principal identifier, preventing identifier reuse attacks. Also scopes action and resource.</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x2705;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable STRICT Schema Validation</h4>
-              <p>Always enable STRICT validation in production to ensure policies are validated against the schema.</p>
+              <p>Always enable STRICT validation mode in production to ensure all policies are validated against the schema before being accepted.</p>
               <pre><code>aws verifiedpermissions update-policy-store \
   --policy-store-id PSEXAMPLEabcdefg111111 \
   --validation-settings &quot;mode=STRICT&quot;</code></pre>
@@ -428,50 +468,90 @@
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Separate Auth vs Admin IAM Permissions</h4>
-              <p>Grant app roles only IsAuthorized. Reserve CreatePolicy, UpdatePolicy, PutSchema for deployment pipelines.</p>
+              <h4>Separate IAM Permissions for Authorization vs. Administration</h4>
+              <p>Grant application roles only IsAuthorized, IsAuthorizedWithToken, and BatchIsAuthorized. Reserve CreatePolicy, UpdatePolicy, DeletePolicy, PutSchema, and other write actions for deployment pipelines and administrators.</p>
+              <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Sid&quot;: &quot;AuthorizationOnly&quot;,
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;verifiedpermissions:IsAuthorized&quot;,
+        &quot;verifiedpermissions:IsAuthorizedWithToken&quot;
+      ],
+      &quot;Resource&quot;: &quot;arn:aws:verifiedpermissions::*:policy-store/*&quot;
+    },
+    {
+      &quot;Sid&quot;: &quot;DenyPolicyModification&quot;,
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;verifiedpermissions:CreatePolicy&quot;,
+        &quot;verifiedpermissions:UpdatePolicy&quot;,
+        &quot;verifiedpermissions:DeletePolicy&quot;,
+        &quot;verifiedpermissions:PutSchema&quot;,
+        &quot;verifiedpermissions:CreatePolicyTemplate&quot;,
+        &quot;verifiedpermissions:DeletePolicyTemplate&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
+}</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4DD;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable CloudTrail Data Events</h4>
-              <p>IsAuthorized and IsAuthorizedWithToken are data events not logged by default. Enable explicitly.</p>
+              <h4>Enable CloudTrail Data Events for Authorization Decisions</h4>
+              <p>IsAuthorized and IsAuthorizedWithToken are classified as data events and are not logged by default. Enable data event logging to audit all authorization decisions.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F194;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Use UUIDs for All Entity Identifiers</h4>
-              <p>Never use human-readable names that can be reassigned. Use UUIDs for all principals and resources.</p>
+              <p>Use universally unique identifiers (UUIDs) for all principal and resource identifiers in Cedar policies. Never use human-readable names that can be reassigned.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
+            <div>
+              <h4>Restrict Identity Source Client IDs</h4>
+              <p>When configuring a Cognito identity source, specify the exact app client IDs that are permitted. Do not leave client ID restrictions empty, as this accepts tokens from any client in the user pool.</p>
+            </div>
+          </div>
+        </div><div class="defense-card">
+          <div class="defense-header">
+            <span class="defense-icon"></span>
             <div>
               <h4>Implement Forbid Policies for Sensitive Actions</h4>
-              <p>Do not rely solely on absence of permits. Create explicit forbid policies for sensitive actions.</p>
+              <p>Do not rely solely on the absence of permit policies. Explicitly create <code>forbid</code> policies for sensitive actions to ensure they are denied even if a broad permit policy is accidentally introduced.</p>
+              <pre><code>forbid(
+  principal,
+  action in Action::&quot;deleteAccount&quot;,
+  resource
+)
+unless { principal in UserGroup::&quot;superAdmins&quot; };</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F4BB;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Manage Policies as Code</h4>
-              <p>Store Cedar policies in version control. Use CI/CD pipelines with code review for all policy changes.</p>
+              <p>Store Cedar policies in version control. Use CI/CD pipelines to deploy policy changes. Require code review for all policy modifications. This prevents ad-hoc policy changes that could introduce authorization gaps.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>Amazon Verified Permissions Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>Amazon Verified Permissions Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>

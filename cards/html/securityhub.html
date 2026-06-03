@@ -379,6 +379,7 @@
           <div class="cmd-title">Create Auto-Suppression Rule</div>
           <pre><code>aws securityhub create-automation-rule \\
   --rule-name &quot;SuppressAll&quot; \\
+  --description &quot;Suppress all critical findings&quot; \\
   --rule-order 1 \\
   --criteria '{&quot;SeverityLabel&quot;:[{&quot;Value&quot;:&quot;CRITICAL&quot;,&quot;Comparison&quot;:&quot;EQUALS&quot;}]}' \\
   --actions '[{&quot;Type&quot;:&quot;FINDING_FIELDS_UPDATE&quot;,&quot;FindingFieldsUpdate&quot;:{&quot;Workflow&quot;:{&quot;Status&quot;:&quot;SUPPRESSED&quot;}}}]'</code></pre>
@@ -448,7 +449,7 @@
     &quot;Action&quot;: [
       &quot;securityhub:BatchUpdateFindings&quot;,
       &quot;securityhub:CreateAutomationRule&quot;,
-      &quot;securityhub:UpdateAutomationRule&quot;
+      &quot;securityhub:BatchUpdateAutomationRules&quot;
     ],
     &quot;Resource&quot;: &quot;*&quot;
   }]

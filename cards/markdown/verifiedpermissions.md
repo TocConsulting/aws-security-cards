@@ -243,8 +243,7 @@ when { context.mfaAuthenticated == true };
     "Effect": "Allow",
     "Action": [
       "verifiedpermissions:IsAuthorized",
-      "verifiedpermissions:IsAuthorizedWithToken",
-      "verifiedpermissions:BatchIsAuthorized"
+      "verifiedpermissions:IsAuthorizedWithToken"
     ],
     "Resource": "arn:aws:verifiedpermissions::123456789012:policy-store/PSEXAMPLEabcdefg111111"
   }]
@@ -302,8 +301,7 @@ Grant application roles only IsAuthorized, IsAuthorizedWithToken, and BatchIsAut
       "Effect": "Allow",
       "Action": [
         "verifiedpermissions:IsAuthorized",
-        "verifiedpermissions:IsAuthorizedWithToken",
-        "verifiedpermissions:BatchIsAuthorized"
+        "verifiedpermissions:IsAuthorizedWithToken"
       ],
       "Resource": "arn:aws:verifiedpermissions::*:policy-store/*"
     },

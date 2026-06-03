@@ -214,7 +214,7 @@ aws logs get-log-events --log-group-name /aws/codebuild/my-project --log-stream-
   "Resource": "arn:aws:codebuild:*:*:project/my-*",
   "Condition": {
     "Null": {
-      "codebuild:BuildSpecOverride": "true"
+      "codebuild:source.buildspec": "true"
     }
   }
 }

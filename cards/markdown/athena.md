@@ -214,12 +214,7 @@ aws athena start-query-execution --query-string "SELECT * FROM massive_table" --
     "athena:StartQueryExecution",
     "athena:GetQueryResults"
   ],
-  "Resource": "arn:aws:athena:*:*:workgroup/analytics",
-  "Condition": {
-    "StringEquals": {
-      "athena:workgroup": "analytics"
-    }
-  }
+  "Resource": "arn:aws:athena:*:*:workgroup/analytics"
 }
 ```
 

